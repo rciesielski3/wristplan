@@ -105,9 +105,75 @@ describe("status mapping", () => {
 
   it("404 on DELETE is a not-found error for DELETE", async () => {
     const { client } = setup([reply(404, "")]);
+    const err = await client.deleteWorkout(7, { allowForeign: true }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(IntervalsNotFoundError);
+    expect(err).toMatchObject({ status: 404, method: "DELETE" });
+  });
+
+  it("404 on DELETE after an owned GET is a not-found error for DELETE", async () => {
+    const { client, fetchMock } = setup([reply(200, event), reply(404, "")]);
     const err = await client.deleteWorkout(7).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(IntervalsNotFoundError);
     expect(err).toMatchObject({ status: 404, method: "DELETE" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([401, 403, 409, 429, 500, 503])(
+    "HTTP %i on DELETE after an owned GET is an api error for DELETE",
+    async (status) => {
+      const { client, fetchMock } = setup([reply(200, event), reply(status, "")]);
+      const err = await client.deleteWorkout(7).catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(IntervalsApiError);
+      expect(err).toMatchObject({ status, method: "DELETE", path: "/athlete/0/events/7" });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("includes a short detail and truncates it when DELETE fails after an owned GET", async () => {
+    const { client } = setup([reply(200, event), reply(500, "y".repeat(5000))]);
+    const err = (await client.deleteWorkout(7).catch((e: unknown) => e)) as Error;
+    expect(
+      err.message.startsWith("intervals.icu DELETE /athlete/0/events/7 failed with 500: "),
+    ).toBe(true);
+    expect(err.message.endsWith(`: ${"y".repeat(200)}`)).toBe(true);
+  });
+
+  it("network failure and timeout on DELETE after an owned GET are wrapped as status 0", async () => {
+    const { vi } = await import("vitest");
+    const { createIntervalsClient } = await import("./index.js");
+    for (const failure of [new TypeError("fetch failed"), new DOMException("t", "TimeoutError")]) {
+      const fetchMock = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(reply(200, event))
+        .mockRejectedValueOnce(failure);
+      const client = createIntervalsClient({ apiKey: "k", athleteId: "0", fetch: fetchMock });
+      await expect(client.deleteWorkout(7)).rejects.toMatchObject({ status: 0, method: "DELETE" });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    }
+  });
+
+  it("failure reading the DELETE body after an owned GET is an api error", async () => {
+    const { client } = setup([
+      reply(200, event),
+      {
+        ok: true,
+        status: 200,
+        text: () => Promise.reject(new Error("reset")),
+      } as unknown as Response,
+    ]);
+    await expect(client.deleteWorkout(7)).rejects.toMatchObject({ status: 0, method: "DELETE" });
+  });
+
+  it("a plain-text 200 DELETE body after an owned GET is success", async () => {
+    const { client } = setup([reply(200, event), reply(200, "deleted")]);
+    await expect(client.deleteWorkout(7)).resolves.toBeUndefined();
+  });
+
+  it("guarded delete sends an abort signal on both the GET and the DELETE", async () => {
+    const { client, fetchMock } = setup([reply(200, event), reply(204, "")]);
+    await client.deleteWorkout(7);
+    expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeDefined();
+    expect(fetchMock.mock.calls[1]?.[1]?.signal).toBeDefined();
   });
 
   it("404 on PUT (event removed between GET and PUT) is not-found for PUT", async () => {
@@ -134,14 +200,16 @@ describe("status mapping", () => {
 
   it("includes a short response detail in the message", async () => {
     const { client } = setup([reply(500, "upstream down")]);
-    await expect(client.deleteWorkout(7)).rejects.toThrow(
+    await expect(client.deleteWorkout(7, { allowForeign: true })).rejects.toThrow(
       "intervals.icu DELETE /athlete/0/events/7 failed with 500: upstream down",
     );
   });
 
   it("truncates long details to 200 characters", async () => {
     const { client } = setup([reply(500, "y".repeat(5000))]);
-    const err = (await client.deleteWorkout(7).catch((e: unknown) => e)) as Error;
+    const err = (await client
+      .deleteWorkout(7, { allowForeign: true })
+      .catch((e: unknown) => e)) as Error;
     expect(err.message.endsWith(`: ${"y".repeat(200)}`)).toBe(true);
   });
 
@@ -169,7 +237,10 @@ describe("status mapping", () => {
       athleteId: "0",
       fetch: vi.fn<typeof fetch>().mockRejectedValue(new DOMException("timed out", "TimeoutError")),
     });
-    await expect(client.deleteWorkout(7)).rejects.toMatchObject({ status: 0, method: "DELETE" });
+    await expect(client.deleteWorkout(7, { allowForeign: true })).rejects.toMatchObject({
+      status: 0,
+      method: "DELETE",
+    });
   });
 
   it("(known defect) wraps a failure while reading the response body as an IntervalsApiError", async () => {
@@ -180,23 +251,25 @@ describe("status mapping", () => {
         text: () => Promise.reject(new Error("stream reset")),
       } as unknown as Response,
     ]);
-    await expect(client.deleteWorkout(7)).rejects.toBeInstanceOf(IntervalsApiError);
+    await expect(client.deleteWorkout(7, { allowForeign: true })).rejects.toBeInstanceOf(
+      IntervalsApiError,
+    );
   });
 
   it("(known defect) never sends a request that hangs forever: passes an abort signal", async () => {
     const { client, fetchMock } = setup([reply(204, "")]);
-    await client.deleteWorkout(7);
+    await client.deleteWorkout(7, { allowForeign: true });
     expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeDefined();
   });
 
   it("(known defect) a successful DELETE is not reported as failure when the server returns a plain-text body", async () => {
     const { client } = setup([reply(200, "deleted")]);
-    await expect(client.deleteWorkout(7)).resolves.toBeUndefined();
+    await expect(client.deleteWorkout(7, { allowForeign: true })).resolves.toBeUndefined();
   });
 
   it("validation errors are distinct from API errors", async () => {
     const { client } = setup();
-    const err = await client.deleteWorkout(0).catch((e: unknown) => e);
+    const err = await client.deleteWorkout(0, { allowForeign: true }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(IntervalsValidationError);
     expect(err).not.toBeInstanceOf(IntervalsApiError);
   });

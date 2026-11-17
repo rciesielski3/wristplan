@@ -1,5 +1,6 @@
 import {
   IntervalsApiError,
+  IntervalsForeignEventError,
   IntervalsNotFoundError,
   IntervalsResponseError,
   IntervalsValidationError,
@@ -23,10 +24,23 @@ export interface IntervalsEvent {
   readonly pushErrors: readonly unknown[] | null;
 }
 
+export const OWNED_EXTERNAL_ID_PREFIX = "wristplan-";
+
+const hasOwnedPrefix = (externalId: string): boolean =>
+  externalId.length > OWNED_EXTERNAL_ID_PREFIX.length &&
+  externalId.startsWith(OWNED_EXTERNAL_ID_PREFIX);
+
+export const isOwnedEvent = (event: Pick<IntervalsEvent, "externalId">): boolean =>
+  event.externalId !== null && hasOwnedPrefix(event.externalId);
+
+export interface DeleteWorkoutOptions {
+  readonly allowForeign?: boolean;
+}
+
 export interface IntervalsClient {
   createWorkout(input: CreateWorkoutInput): Promise<IntervalsEvent>;
   rescheduleWorkout(eventId: number, date: string): Promise<IntervalsEvent>;
-  deleteWorkout(eventId: number): Promise<void>;
+  deleteWorkout(eventId: number, options?: DeleteWorkoutOptions): Promise<void>;
 }
 
 export interface IntervalsClientOptions {
@@ -56,6 +70,11 @@ function assertDate(date: string): void {
     parsed.getUTCMonth() === m - 1 &&
     parsed.getUTCDate() === d;
   if (!valid) throw new IntervalsValidationError("date must be a valid YYYY-MM-DD");
+}
+
+function assertSameId(method: string, path: string, requested: number, actual: number): void {
+  if (actual !== requested)
+    throw new IntervalsResponseError(method, path, "id does not match request");
 }
 
 function assertEventId(eventId: number): void {
@@ -149,7 +168,14 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
   return {
     async createWorkout(input) {
       assertDate(input.date);
-      if (!input.externalId) throw new IntervalsValidationError("externalId is required");
+      if (typeof input.externalId !== "string" || !input.externalId) {
+        throw new IntervalsValidationError("externalId is required");
+      }
+      if (!hasOwnedPrefix(input.externalId)) {
+        throw new IntervalsValidationError(
+          `externalId must start with ${OWNED_EXTERNAL_ID_PREFIX} followed by a suffix`,
+        );
+      }
       const path = `${eventsPath}?upsertOnUid=true`;
       const raw = await request("POST", path, {
         category: "WORKOUT",
@@ -168,7 +194,9 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
       assertDate(date);
       const path = toEventPath(eventId);
       const current = await request("GET", path);
-      parseEvent("GET", path, current);
+      const existing = parseEvent("GET", path, current);
+      assertSameId("GET", path, eventId, existing.id);
+      if (!isOwnedEvent(existing)) throw new IntervalsForeignEventError(eventId);
       const raw = await request("PUT", path, {
         ...(current as Json),
         start_date_local: `${date}T00:00:00`,
@@ -176,8 +204,19 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
       return parseEvent("PUT", path, raw);
     },
 
-    async deleteWorkout(eventId) {
+    async deleteWorkout(eventId, options) {
       assertEventId(eventId);
+      const allowForeign =
+        typeof options === "object" &&
+        options !== null &&
+        Object.hasOwn(options, "allowForeign") &&
+        options.allowForeign === true;
+      if (!allowForeign) {
+        const path = toEventPath(eventId);
+        const existing = parseEvent("GET", path, await request("GET", path));
+        assertSameId("GET", path, eventId, existing.id);
+        if (!isOwnedEvent(existing)) throw new IntervalsForeignEventError(eventId);
+      }
       await request("DELETE", toEventPath(eventId), undefined, false);
     },
   };

@@ -25,7 +25,7 @@ describe("request shape", () => {
       start_date_local: "2026-01-02T00:00:00",
       target: "HR",
       description: "- 10m Z1 HR",
-      external_id: "x-1",
+      external_id: "wristplan-x-1",
     });
   });
 
@@ -44,7 +44,7 @@ describe("request shape", () => {
     expect(a.url).toContain("upsertOnUid=true");
     expect(b.url).toBe(a.url);
     expect(b.rawBody).toBe(a.rawBody);
-    expect(b.body.external_id).toBe("x-1");
+    expect(b.body.external_id).toBe("wristplan-x-1");
   });
 
   it("reschedule issues GET without body then PUT with json content type, both authorised", async () => {
@@ -83,7 +83,7 @@ describe("request shape", () => {
 
   it("delete sends DELETE without body or content type", async () => {
     const { client, fetchMock } = setup([reply(204, "")]);
-    await client.deleteWorkout(7);
+    await client.deleteWorkout(7, { allowForeign: true });
     const c = callOf(fetchMock);
     expect(c.method).toBe("DELETE");
     expect(c.url).toBe(`${BASE}/athlete/0/events/7`);
@@ -102,7 +102,7 @@ describe("request shape", () => {
       athleteId: "i9",
       fetch: fetchMock,
       baseUrl: "http://localhost:1/api",
-    }).deleteWorkout(3);
+    }).deleteWorkout(3, { allowForeign: true });
     expect(callOf(fetchMock).url).toBe("http://localhost:1/api/athlete/i9/events/3");
   });
 });

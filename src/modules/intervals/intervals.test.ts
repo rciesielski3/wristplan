@@ -12,7 +12,7 @@ import {
 const KEY = "secret-key-123";
 const event = {
   id: 7,
-  external_id: "x-1",
+  external_id: "wristplan-x-1",
   start_date_local: "2026-01-02T00:00:00",
   push_errors: null,
   name: "n",
@@ -34,7 +34,7 @@ const input = {
   type: "Run",
   target: "HR",
   description: "- 10m Z1 HR",
-  externalId: "x-1",
+  externalId: "wristplan-x-1",
 } as const;
 
 describe("loadIntervalsConfig", () => {
@@ -61,7 +61,7 @@ describe("createWorkout", () => {
     const result = await client.createWorkout(input);
     expect(result).toEqual({
       id: 7,
-      externalId: "x-1",
+      externalId: "wristplan-x-1",
       startDateLocal: "2026-01-02T00:00:00",
       pushErrors: null,
     });
@@ -78,7 +78,7 @@ describe("createWorkout", () => {
       start_date_local: "2026-01-02T00:00:00",
       target: "HR",
       description: "- 10m Z1 HR",
-      external_id: "x-1",
+      external_id: "wristplan-x-1",
     });
   });
 
@@ -192,13 +192,13 @@ describe("rescheduleWorkout", () => {
 describe("deleteWorkout", () => {
   it("deletes", async () => {
     const { client, fetchMock } = setup(reply(200, ""));
-    await expect(client.deleteWorkout(7)).resolves.toBeUndefined();
+    await expect(client.deleteWorkout(7, { allowForeign: true })).resolves.toBeUndefined();
     expect(fetchMock.mock.calls[0]?.[1]?.method).toBe("DELETE");
   });
 
   it("throws typed not-found on 404", async () => {
     const { client } = setup(reply(404, "gone"));
-    const err = await client.deleteWorkout(7).catch((e: unknown) => e);
+    const err = await client.deleteWorkout(7, { allowForeign: true }).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(IntervalsNotFoundError);
     expect(err).toBeInstanceOf(IntervalsApiError);
     expect((err as IntervalsApiError).status).toBe(404);
@@ -206,8 +206,13 @@ describe("deleteWorkout", () => {
 
   it("throws api error on 500 and validates id", async () => {
     const { client } = setup(reply(500, "err"));
-    await expect(client.deleteWorkout(7)).rejects.toMatchObject({ status: 500, method: "DELETE" });
-    await expect(client.deleteWorkout(1.5)).rejects.toBeInstanceOf(IntervalsValidationError);
+    await expect(client.deleteWorkout(7, { allowForeign: true })).rejects.toMatchObject({
+      status: 500,
+      method: "DELETE",
+    });
+    await expect(client.deleteWorkout(1.5, { allowForeign: true })).rejects.toBeInstanceOf(
+      IntervalsValidationError,
+    );
   });
 });
 
