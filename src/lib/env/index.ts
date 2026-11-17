@@ -1,4 +1,4 @@
-import { type Env, envSchema } from "./schema.js";
+import { type Env, envSchema } from "./schema";
 
 export type { Env };
 

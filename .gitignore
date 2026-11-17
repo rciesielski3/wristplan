@@ -2,6 +2,7 @@ node_modules/
 dist/
 build/
 .next/
+next-env.d.ts
 coverage/
 playwright-report/
 test-results/
@@ -17,3 +18,4 @@ KICKOFF_PROMPT.md
 *.sqlite3
 *.db*
 .DS_Store
+tsconfig.tsbuildinfo
