@@ -20,7 +20,7 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code
 
 - TypeScript strict plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`. No `any`, no non-null assertions without a reason.
 - Keep domain logic separated from I/O; I/O is confined to integration clients with injectable transport.
-- Tests: deterministic, no real network or time, synthetic fixtures only (no real activity data, GPS, IDs, tokens). Live tests only with `LIVE_TESTS=1`. Use fake, low-entropy test credentials (gitleaks flags high-entropy fakes). Tests run through the default guarded paths; shared helpers live in `test/`. Never lower coverage thresholds or weaken assertions.
+- Tests: deterministic, no real network or time, synthetic fixtures only (no real activity data, GPS, IDs, tokens). Live tests only with `LIVE_TESTS=1`. Use fake, low-entropy test credentials (gitleaks flags high-entropy fakes). Tests exercise the default-deny ownership guard (`allowForeign` only in bypass tests); shared helpers live in `test/`. Never lower coverage thresholds or weaken assertions.
 - Comments only for a non-obvious "why".
 - Smallest change that meets the AC. DRY, KISS, YAGNI. Justify every new dependency in the commit body.
 - Dependencies are pinned to exact versions (no `^`).
@@ -36,7 +36,7 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code
 
 - Conventional Commits, `type(scope): subject`, imperative, lowercase, <=72 chars. Types: feat, fix, refactor, perf, test, build, ci, chore, revert.
 - No AI attribution or `Co-Authored-By`. Never change git config. Never push without asking.
-- `main` is protected: PR required, checks `verify` and `conventional-title`, branch up to date, squash-only, linear history. Flow: branch -> PR -> review by an agent other than the author -> squash merge only if the reviewer says safe.
+- `main` is protected: PR required, checks `verify` and `conventional-title`, branch up to date, squash-only, linear history. Flow: branch -> PR -> review by an agent other than the author -> squash merge only if the reviewer says safe. Pushing a branch, opening a PR, `gh pr update-branch` and merging each need user approval unless the user has authorized the PR flow for the current task.
 - If merge is blocked as BEHIND: `gh pr update-branch <n> --rebase`, wait for CI, then merge. Confirm the merge landed (`gh pr view`, `git log`) before reporting it.
 - commitlint body lines <=100 chars.
 - Node 22 required (`.nvmrc`, `engine-strict=true`): `source ~/.nvm/nvm.sh && nvm use 22`.
