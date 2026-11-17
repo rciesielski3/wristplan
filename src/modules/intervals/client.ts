@@ -72,9 +72,9 @@ function assertDate(date: string): void {
   if (!valid) throw new IntervalsValidationError("date must be a valid YYYY-MM-DD");
 }
 
-function assertSameId(method: string, path: string, requested: number, actual: number): void {
+function assertSameId(path: string, requested: number, actual: number): void {
   if (actual !== requested)
-    throw new IntervalsResponseError(method, path, "id does not match request");
+    throw new IntervalsResponseError("GET", path, "id does not match request");
 }
 
 function assertEventId(eventId: number): void {
@@ -165,6 +165,15 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
 
   const toEventPath = (eventId: number) => `${eventsPath}/${eventId}`;
 
+  async function loadOwnedEvent(eventId: number): Promise<unknown> {
+    const path = toEventPath(eventId);
+    const raw = await request("GET", path);
+    const existing = parseEvent("GET", path, raw);
+    assertSameId(path, eventId, existing.id);
+    if (!isOwnedEvent(existing)) throw new IntervalsForeignEventError(eventId);
+    return raw;
+  }
+
   return {
     async createWorkout(input) {
       assertDate(input.date);
@@ -193,10 +202,7 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
       assertEventId(eventId);
       assertDate(date);
       const path = toEventPath(eventId);
-      const current = await request("GET", path);
-      const existing = parseEvent("GET", path, current);
-      assertSameId("GET", path, eventId, existing.id);
-      if (!isOwnedEvent(existing)) throw new IntervalsForeignEventError(eventId);
+      const current = await loadOwnedEvent(eventId);
       const raw = await request("PUT", path, {
         ...(current as Json),
         start_date_local: `${date}T00:00:00`,
@@ -211,12 +217,7 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
         options !== null &&
         Object.hasOwn(options, "allowForeign") &&
         options.allowForeign === true;
-      if (!allowForeign) {
-        const path = toEventPath(eventId);
-        const existing = parseEvent("GET", path, await request("GET", path));
-        assertSameId("GET", path, eventId, existing.id);
-        if (!isOwnedEvent(existing)) throw new IntervalsForeignEventError(eventId);
-      }
+      if (!allowForeign) await loadOwnedEvent(eventId);
       await request("DELETE", toEventPath(eventId), undefined, false);
     },
   };

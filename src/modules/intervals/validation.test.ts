@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { input, reply, setup } from "../../../test/intervals-helpers.js";
+import { event, input, reply, setup, setupOwnedDelete } from "../../../test/intervals-helpers.js";
 import { createIntervalsClient, IntervalsValidationError } from "./index.js";
 
 const badDates = [
@@ -32,16 +32,11 @@ const badIds = [
 ];
 
 describe("date validation", () => {
-  it.each(badDates)("create rejects %j without calling the network", async (date) => {
+  it.each(badDates)("create and reschedule reject %j without calling the network", async (date) => {
     const { client, fetchMock } = setup();
     await expect(client.createWorkout({ ...input, date })).rejects.toBeInstanceOf(
       IntervalsValidationError,
     );
-    expect(fetchMock).not.toHaveBeenCalled();
-  });
-
-  it.each(badDates)("reschedule rejects %j without calling the network", async (date) => {
-    const { client, fetchMock } = setup();
     await expect(client.rescheduleWorkout(7, date)).rejects.toBeInstanceOf(
       IntervalsValidationError,
     );
@@ -60,15 +55,13 @@ describe("eventId validation", () => {
     await expect(client.rescheduleWorkout(id, "2026-01-02")).rejects.toBeInstanceOf(
       IntervalsValidationError,
     );
-    await expect(client.deleteWorkout(id, { allowForeign: true })).rejects.toBeInstanceOf(
-      IntervalsValidationError,
-    );
+    await expect(client.deleteWorkout(id)).rejects.toBeInstanceOf(IntervalsValidationError);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("accepts the largest safe integer", async () => {
-    const { client, fetchMock } = setup([reply(204, "")]);
-    await client.deleteWorkout(Number.MAX_SAFE_INTEGER, { allowForeign: true });
+    const { client, fetchMock } = setupOwnedDelete(reply(204, ""), Number.MAX_SAFE_INTEGER);
+    await client.deleteWorkout(Number.MAX_SAFE_INTEGER);
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/events\/9007199254740991$/);
   });
 });
@@ -85,8 +78,8 @@ describe("externalId validation", () => {
 
 describe("athleteId handling", () => {
   it.each(["0", "i12345", "a_b-C"])("accepts athleteId %j", async (athleteId) => {
-    const { client, fetchMock } = setup([reply(204, "")], athleteId);
-    await client.deleteWorkout(3, { allowForeign: true });
+    const { client, fetchMock } = setupOwnedDelete(reply(204, ""), 3, athleteId);
+    await client.deleteWorkout(3);
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
       `https://intervals.icu/api/v1/athlete/${athleteId}/events/3`,
     );
@@ -102,12 +95,13 @@ describe("athleteId handling", () => {
 
 describe("default fetch", () => {
   it("uses the global fetch when none is injected", async () => {
-    const spy = vi.fn<typeof fetch>().mockResolvedValue(reply(204, ""));
+    const spy = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(reply(200, { ...event, id: 1 }))
+      .mockResolvedValueOnce(reply(204, ""));
     vi.stubGlobal("fetch", spy);
     try {
-      await createIntervalsClient({ apiKey: "k", athleteId: "0" }).deleteWorkout(1, {
-        allowForeign: true,
-      });
+      await createIntervalsClient({ apiKey: "k", athleteId: "0" }).deleteWorkout(1);
       expect(String(spy.mock.calls[0]?.[0])).toBe(
         "https://intervals.icu/api/v1/athlete/0/events/1",
       );

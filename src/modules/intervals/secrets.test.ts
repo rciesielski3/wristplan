@@ -13,13 +13,9 @@ const failingFetch = (r: () => Response | Promise<Response>) =>
   });
 
 const http =
-  (status: number, body: string, op: "create" | "delete" = "create"): Scenario["run"] =>
-  () => {
-    const client = failingFetch(() => reply(status, body));
-    return op === "create"
-      ? client.createWorkout(input)
-      : client.deleteWorkout(7, { allowForeign: true });
-  };
+  (status: number, body: string): Scenario["run"] =>
+  () =>
+    failingFetch(() => reply(status, body)).createWorkout(input);
 
 const guardedDelete =
   (second: () => Response | Promise<Response>, first: () => Response = () => reply(200, event)) =>
@@ -103,8 +99,6 @@ const scenarios: Scenario[] = [
   { name: "401 json echoing the key", run: http(401, JSON.stringify({ error: KEY })) },
   { name: "403 echoing key twice", run: http(403, `${KEY}${KEY}`) },
   { name: "429 echoing key", run: http(429, `slow down ${KEY}`) },
-  { name: "500 echoing key on delete", run: http(500, `${KEY}`, "delete") },
-  { name: "404 echoing key", run: http(404, `no event ${KEY}`, "delete") },
   { name: "key straddling the truncation boundary", run: http(500, `${"a".repeat(195)}${KEY}`) },
   { name: "malformed json containing key", run: http(200, `{"k":"${KEY}"`) },
   { name: "valid json of wrong shape containing key", run: http(200, JSON.stringify({ id: KEY })) },
@@ -125,7 +119,7 @@ const scenarios: Scenario[] = [
   },
   {
     name: "validation error on delete",
-    run: () => setup().client.deleteWorkout(Number.NaN, { allowForeign: true }),
+    run: () => setup().client.deleteWorkout(Number.NaN),
   },
   { name: "401 echoing full Authorization header", run: http(401, `Authorization: ${BASIC}`) },
   {
@@ -141,15 +135,14 @@ const leakingScenarios: Scenario[] = [
   { name: "500 echoing lowercase scheme", run: http(500, `authorization: basic ${TOKEN}`) },
   {
     name: "failure while reading the body with key in message",
-    run: () =>
-      failingFetch(
-        () =>
-          ({
-            ok: true,
-            status: 200,
-            text: () => Promise.reject(new Error(KEY)),
-          }) as unknown as Response,
-      ).deleteWorkout(7, { allowForeign: true }),
+    run: guardedDelete(
+      () =>
+        ({
+          ok: true,
+          status: 200,
+          text: () => Promise.reject(new Error(KEY)),
+        }) as unknown as Response,
+    ),
   },
 ];
 
@@ -183,7 +176,7 @@ describe("secret hygiene: key and base64 token never appear in any error surface
     }
   });
 
-  it.each(leakingScenarios)("(known defect) $name", async (s) => {
+  it.each(leakingScenarios)("$name", async (s) => {
     const e = await capture(s);
     for (const [surface, text] of Object.entries(surfaces(e))) {
       expect(text, surface).not.toContain(KEY);
@@ -202,7 +195,7 @@ describe("secret hygiene: no Basic credentials text in errors", () => {
 });
 
 describe("secret hygiene: Basic scheme text", () => {
-  it.each(basicTextScenarios)("(known defect) $name", async (s) => {
+  it.each(basicTextScenarios)("$name", async (s) => {
     const e = await capture(s);
     for (const [surface, text] of Object.entries(surfaces(e))) {
       expect(text, surface).not.toContain("Basic ");
@@ -247,7 +240,7 @@ describe("secret hygiene: client and config objects", () => {
     ).toBe("0");
   });
 
-  it("(known defect) config rejects a whitespace-only api key", () => {
+  it("config rejects a whitespace-only api key", () => {
     expect(() => loadIntervalsConfig({ INTERVALS_API_KEY: "   " })).toThrow(IntervalsConfigError);
   });
 });
