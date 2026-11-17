@@ -45,3 +45,9 @@ export const callOf = (fetchMock: ReturnType<typeof vi.fn<typeof fetch>>, i = 0)
     rawBody: init?.body,
   };
 };
+
+export const setupOwnedDelete = (deleteReply: Response, id = event.id, athleteId = "0") =>
+  setup([reply(200, { ...event, id }), deleteReply], athleteId);
+
+export const methodsOf = (fetchMock: ReturnType<typeof vi.fn<typeof fetch>>) =>
+  fetchMock.mock.calls.map((_, i) => callOf(fetchMock, i).method);

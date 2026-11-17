@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   BASE,
   BASIC,
@@ -7,7 +7,9 @@ import {
   input,
   reply,
   setup,
+  setupOwnedDelete,
 } from "../../../test/intervals-helpers.js";
+import { createIntervalsClient } from "./index.js";
 
 describe("request shape", () => {
   it("create sends POST with upsert query, auth, json content type and exact body", async () => {
@@ -81,22 +83,21 @@ describe("request shape", () => {
     expect(callOf(fetchMock, 1).body).toEqual({ ...full, start_date_local: "2027-12-31T00:00:00" });
   });
 
-  it("delete sends DELETE without body or content type", async () => {
-    const { client, fetchMock } = setup([reply(204, "")]);
-    await client.deleteWorkout(7, { allowForeign: true });
-    const c = callOf(fetchMock);
-    expect(c.method).toBe("DELETE");
-    expect(c.url).toBe(`${BASE}/athlete/0/events/7`);
-    expect(c.rawBody).toBeUndefined();
-    expect(c.headers.get("content-type")).toBeNull();
-    expect(c.headers.get("authorization")).toBe(BASIC);
+  it("delete sends an authorised, body-less GET then DELETE, credentials only in the header", async () => {
+    const { client, fetchMock } = setupOwnedDelete(reply(204, ""));
+    await client.deleteWorkout(7);
+    const [get, del] = [callOf(fetchMock, 0), callOf(fetchMock, 1)];
+    expect([get.method, del.method]).toEqual(["GET", "DELETE"]);
+    for (const c of [get, del]) {
+      expect(c.url).toBe(`${BASE}/athlete/0/events/7`);
+      expect(c.rawBody).toBeUndefined();
+      expect(c.headers.get("content-type")).toBeNull();
+      expect(c.headers.get("authorization")).toBe(BASIC);
+    }
   });
 
   it("honours a custom baseUrl", async () => {
-    const fetchMock = (await import("vitest")).vi
-      .fn<typeof fetch>()
-      .mockResolvedValue(reply(204, ""));
-    const { createIntervalsClient } = await import("../../../src/modules/intervals/index.js");
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(reply(204, ""));
     await createIntervalsClient({
       apiKey: "k",
       athleteId: "i9",
