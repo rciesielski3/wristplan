@@ -1,6 +1,6 @@
 import { inspect } from "node:util";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { EnvError, getEnv, parseEnv } from "./index.js";
+import { EnvError, getEnv, parseEnv } from "./index";
 
 const SECRET = "fake-secret-value";
 const defaults = { INTERVALS_ATHLETE_ID: "0", NODE_ENV: "development" };
