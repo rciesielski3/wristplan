@@ -38,3 +38,10 @@ export class IntervalsResponseError extends Error {
     super(`intervals.icu ${method} ${path} returned unexpected response: ${reason}`);
   }
 }
+
+export class IntervalsForeignEventError extends Error {
+  override readonly name = "IntervalsForeignEventError";
+  constructor(readonly eventId: number) {
+    super(`intervals.icu event ${eventId} was not created by wristplan`);
+  }
+}

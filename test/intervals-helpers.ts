@@ -8,7 +8,7 @@ export const BASE = "https://intervals.icu/api/v1";
 
 export const event = {
   id: 7,
-  external_id: "x-1",
+  external_id: "wristplan-x-1",
   start_date_local: "2026-01-02T00:00:00",
   push_errors: null,
   name: "n",
@@ -20,7 +20,7 @@ export const input = {
   type: "Run",
   target: "HR",
   description: "- 10m Z1 HR",
-  externalId: "x-1",
+  externalId: "wristplan-x-1",
 } as const;
 
 export const reply = (status: number, body: unknown) =>

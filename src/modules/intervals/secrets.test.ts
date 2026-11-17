@@ -1,6 +1,6 @@
 import { inspect } from "node:util";
 import { describe, expect, it, vi } from "vitest";
-import { BASIC, input, KEY, reply, setup, TOKEN } from "../../../test/intervals-helpers.js";
+import { BASIC, event, input, KEY, reply, setup, TOKEN } from "../../../test/intervals-helpers.js";
 import { createIntervalsClient, IntervalsConfigError, loadIntervalsConfig } from "./index.js";
 
 type Scenario = { name: string; run: () => Promise<unknown> | unknown };
@@ -16,10 +16,89 @@ const http =
   (status: number, body: string, op: "create" | "delete" = "create"): Scenario["run"] =>
   () => {
     const client = failingFetch(() => reply(status, body));
-    return op === "create" ? client.createWorkout(input) : client.deleteWorkout(7);
+    return op === "create"
+      ? client.createWorkout(input)
+      : client.deleteWorkout(7, { allowForeign: true });
   };
 
+const guardedDelete =
+  (second: () => Response | Promise<Response>, first: () => Response = () => reply(200, event)) =>
+  () =>
+    createIntervalsClient({
+      apiKey: KEY,
+      athleteId: "0",
+      fetch: vi
+        .fn<typeof fetch>()
+        .mockImplementationOnce(async () => first())
+        .mockImplementationOnce(async () => second()),
+    }).deleteWorkout(7);
+
+const guardedScenarios: Scenario[] = [
+  { name: "guarded delete: DELETE 500 echoing key", run: guardedDelete(() => reply(500, KEY)) },
+  { name: "guarded delete: DELETE 404 echoing key", run: guardedDelete(() => reply(404, KEY)) },
+  {
+    name: "guarded delete: DELETE 401 echoing header",
+    run: guardedDelete(() => reply(401, BASIC)),
+  },
+  {
+    name: "guarded delete: GET 401 echoing key",
+    run: guardedDelete(
+      () => reply(200, ""),
+      () => reply(401, `${KEY} ${BASIC}`),
+    ),
+  },
+  {
+    name: "guarded delete: GET 404 echoing token",
+    run: guardedDelete(
+      () => reply(200, ""),
+      () => reply(404, TOKEN),
+    ),
+  },
+  {
+    name: "guarded delete: GET 500 echoing key",
+    run: guardedDelete(
+      () => reply(200, ""),
+      () => reply(500, KEY),
+    ),
+  },
+  {
+    name: "guarded delete: GET returns malformed json containing key",
+    run: guardedDelete(
+      () => reply(200, ""),
+      () => reply(200, `{"k":"${KEY}"`),
+    ),
+  },
+  {
+    name: "guarded delete: GET returns wrong shape containing key",
+    run: guardedDelete(
+      () => reply(200, ""),
+      () => reply(200, { id: KEY }),
+    ),
+  },
+  {
+    name: "guarded delete: foreign event whose fields contain key",
+    run: guardedDelete(
+      () => reply(204, ""),
+      () => reply(200, { ...event, external_id: KEY, name: `${KEY} ${BASIC}` }),
+    ),
+  },
+  {
+    name: "guarded delete: network error on DELETE with key in message",
+    run: guardedDelete(() => Promise.reject(new Error(`${BASIC} ${KEY}`)) as never),
+  },
+  {
+    name: "guarded delete: network error on GET with key in message",
+    run: guardedDelete(
+      () => reply(204, ""),
+      () => {
+        throw new Error(`${BASIC} ${KEY}`);
+      },
+    ),
+  },
+];
+
 const scenarios: Scenario[] = [
+  ...guardedScenarios,
   { name: "401 echoing the key", run: http(401, `invalid key ${KEY}`) },
   { name: "401 json echoing the key", run: http(401, JSON.stringify({ error: KEY })) },
   { name: "403 echoing key twice", run: http(403, `${KEY}${KEY}`) },
@@ -44,7 +123,10 @@ const scenarios: Scenario[] = [
     name: "validation error with key as externalId",
     run: () => setup().client.createWorkout({ ...input, date: "bad", externalId: KEY }),
   },
-  { name: "validation error on delete", run: () => setup().client.deleteWorkout(Number.NaN) },
+  {
+    name: "validation error on delete",
+    run: () => setup().client.deleteWorkout(Number.NaN, { allowForeign: true }),
+  },
   { name: "401 echoing full Authorization header", run: http(401, `Authorization: ${BASIC}`) },
   {
     name: "403 echoing json header",
@@ -67,7 +149,7 @@ const leakingScenarios: Scenario[] = [
             status: 200,
             text: () => Promise.reject(new Error(KEY)),
           }) as unknown as Response,
-      ).deleteWorkout(7),
+      ).deleteWorkout(7, { allowForeign: true }),
   },
 ];
 

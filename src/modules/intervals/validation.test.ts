@@ -60,13 +60,15 @@ describe("eventId validation", () => {
     await expect(client.rescheduleWorkout(id, "2026-01-02")).rejects.toBeInstanceOf(
       IntervalsValidationError,
     );
-    await expect(client.deleteWorkout(id)).rejects.toBeInstanceOf(IntervalsValidationError);
+    await expect(client.deleteWorkout(id, { allowForeign: true })).rejects.toBeInstanceOf(
+      IntervalsValidationError,
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("accepts the largest safe integer", async () => {
     const { client, fetchMock } = setup([reply(204, "")]);
-    await client.deleteWorkout(Number.MAX_SAFE_INTEGER);
+    await client.deleteWorkout(Number.MAX_SAFE_INTEGER, { allowForeign: true });
     expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/events\/9007199254740991$/);
   });
 });
@@ -84,7 +86,7 @@ describe("externalId validation", () => {
 describe("athleteId handling", () => {
   it.each(["0", "i12345", "a_b-C"])("accepts athleteId %j", async (athleteId) => {
     const { client, fetchMock } = setup([reply(204, "")], athleteId);
-    await client.deleteWorkout(3);
+    await client.deleteWorkout(3, { allowForeign: true });
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
       `https://intervals.icu/api/v1/athlete/${athleteId}/events/3`,
     );
@@ -103,7 +105,9 @@ describe("default fetch", () => {
     const spy = vi.fn<typeof fetch>().mockResolvedValue(reply(204, ""));
     vi.stubGlobal("fetch", spy);
     try {
-      await createIntervalsClient({ apiKey: "k", athleteId: "0" }).deleteWorkout(1);
+      await createIntervalsClient({ apiKey: "k", athleteId: "0" }).deleteWorkout(1, {
+        allowForeign: true,
+      });
       expect(String(spy.mock.calls[0]?.[0])).toBe(
         "https://intervals.icu/api/v1/athlete/0/events/1",
       );
