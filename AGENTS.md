@@ -13,6 +13,7 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code
 
 - `src/modules/**` — one folder per module. Coverage threshold: 90% lines and branches.
 - `src/modules/intervals` — intervals.icu HTTP client (client, config, errors); `fetch` is injectable for tests. I/O clients live under `modules/<integration>` while there is one integration; extract adapters to `src/integrations/` once more exist.
+- `src/lib/**` — shared code; `lib/env` validates environment variables with zod (`parseEnv`, `getEnv`). Same 90% threshold.
 - `test/` — contract and cross-module tests.
 - Commit scopes mirror modules: activities, workouts, calendar, analytics, intervals, garmin, lib, repo, ci, deps.
 

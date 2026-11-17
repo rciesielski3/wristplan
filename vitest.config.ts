@@ -6,7 +6,7 @@ export default defineConfig({
     passWithNoTests: true,
     coverage: {
       provider: "v8",
-      include: ["src/modules/**"],
+      include: ["src/modules/**", "src/lib/**"],
       thresholds: { lines: 90, branches: 90 },
     },
   },
