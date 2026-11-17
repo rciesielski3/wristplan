@@ -4,7 +4,7 @@ import {
   IntervalsNotFoundError,
   IntervalsResponseError,
   IntervalsValidationError,
-} from "./errors.js";
+} from "./errors";
 
 export type WorkoutTarget = "HR" | "PACE" | "POWER" | "AUTO";
 

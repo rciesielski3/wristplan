@@ -1,7 +1,7 @@
 import { inspect } from "node:util";
 import { describe, expect, it, vi } from "vitest";
-import { BASIC, event, input, KEY, reply, setup, TOKEN } from "../../../test/intervals-helpers.js";
-import { createIntervalsClient, IntervalsConfigError, loadIntervalsConfig } from "./index.js";
+import { BASIC, event, input, KEY, reply, setup, TOKEN } from "../../../test/intervals-helpers";
+import { createIntervalsClient, IntervalsConfigError, loadIntervalsConfig } from "./index";
 
 type Scenario = { name: string; run: () => Promise<unknown> | unknown };
 

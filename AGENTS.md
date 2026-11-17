@@ -21,6 +21,7 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code
 
 - TypeScript strict plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`. No `any`, no non-null assertions without a reason.
 - Keep domain logic separated from I/O; I/O is confined to integration clients with injectable transport.
+- Relative imports are extensionless (Turbopack cannot map .js to .ts).
 - Tests: deterministic, no real network or time, synthetic fixtures only (no real activity data, GPS, IDs, tokens). Live tests only with `LIVE_TESTS=1`. Use fake, low-entropy test credentials (gitleaks flags high-entropy fakes). Tests exercise the default-deny ownership guard (`allowForeign` only in bypass tests); shared helpers live in `test/`. Never lower coverage thresholds or weaken assertions.
 - Comments only for a non-obvious "why".
 - Smallest change that meets the AC. DRY, KISS, YAGNI. Justify every new dependency in the commit body.

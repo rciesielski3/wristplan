@@ -8,8 +8,8 @@ import {
   reply,
   setup,
   setupOwnedDelete,
-} from "../../../test/intervals-helpers.js";
-import { createIntervalsClient } from "./index.js";
+} from "../../../test/intervals-helpers";
+import { createIntervalsClient } from "./index";
 
 describe("request shape", () => {
   it("create sends POST with upsert query, auth, json content type and exact body", async () => {

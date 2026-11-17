@@ -7,7 +7,7 @@ import {
   reply,
   setup,
   setupOwnedDelete,
-} from "../../../test/intervals-helpers.js";
+} from "../../../test/intervals-helpers";
 import {
   IntervalsForeignEventError,
   IntervalsNotFoundError,
@@ -15,7 +15,7 @@ import {
   IntervalsValidationError,
   isOwnedEvent,
   OWNED_EXTERNAL_ID_PREFIX,
-} from "./index.js";
+} from "./index";
 
 const foreign: { name: string; ext: string | null | undefined }[] = [
   { name: "foreign external_id", ext: "abc" },

@@ -8,8 +8,8 @@ export {
   isOwnedEvent,
   OWNED_EXTERNAL_ID_PREFIX,
   type WorkoutTarget,
-} from "./client.js";
-export { type IntervalsConfig, loadIntervalsConfig } from "./config.js";
+} from "./client";
+export { type IntervalsConfig, loadIntervalsConfig } from "./config";
 export {
   IntervalsApiError,
   IntervalsConfigError,
@@ -17,4 +17,4 @@ export {
   IntervalsNotFoundError,
   IntervalsResponseError,
   IntervalsValidationError,
-} from "./errors.js";
+} from "./errors";
