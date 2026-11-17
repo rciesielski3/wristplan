@@ -8,9 +8,7 @@ test-results/
 .env*
 !.env.example
 .ai/
-.claude/
-CLAUDE.md
-AGENTS.md
+.claude/settings.local.json
 KICKOFF_PROMPT.md
 *.fit
 *.gpx

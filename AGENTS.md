@@ -36,4 +36,4 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. No c
 - Conventional Commits, `type(scope): subject`, imperative, lowercase, <=72 chars. Types: feat, fix, refactor, perf, test, build, ci, chore, revert.
 - No AI attribution or `Co-Authored-By`. Never change git config. Never push without asking.
 - Hooks (lefthook): gitleaks + biome on commit, commitlint on message, `pnpm verify` on push.
-- Never commit `.ai/`, `.claude/`, `CLAUDE.md`, `AGENTS.md`, plans or notes (all gitignored).
+- `CLAUDE.md`, `AGENTS.md` and `.claude/` (agents, settings) are tracked. Never commit `.ai/`, `.claude/settings.local.json`, plans, notes or ADRs.
