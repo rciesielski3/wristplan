@@ -24,12 +24,7 @@
       "WebFetch(domain:intervals.icu)",
       "WebFetch(domain:developer.garmin.com)"
     ],
-    "ask": [
-      "Bash(git push:*)",
-      "Bash(gh pr create:*)",
-      "Bash(gh pr merge:*)",
-      "Bash(curl:*)"
-    ],
+    "ask": ["Bash(git push:*)", "Bash(gh pr create:*)", "Bash(gh pr merge:*)", "Bash(curl:*)"],
     "deny": [
       "Read(./.env)",
       "Read(./.env.*)",

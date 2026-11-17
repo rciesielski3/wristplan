@@ -13,7 +13,7 @@ Check:
 - Comments: flag any narrative or redundant comment.
 - Security: secrets, tokens, Authorization headers in code, logs, fixtures or errors; unsafe input handling; secrets reaching client components.
 - Privacy: real activity data, GPS, account IDs in fixtures.
-- Repo policy: no `.ai/`, `.claude/`, `CLAUDE.md`, `AGENTS.md`, plans or notes staged.
+- Repo policy: no `.ai/`, `.claude/settings.local.json`, plans, notes or ADRs staged.
 - Commit message: Conventional Commits, no AI attribution.
 - Tests: meaningful assertions, deterministic, cover negative paths.
 
