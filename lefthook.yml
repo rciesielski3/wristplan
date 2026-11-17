@@ -1,0 +1,19 @@
+pre-commit:
+  jobs:
+    - name: gitleaks
+      run: gitleaks git --pre-commit --staged --redact --no-banner
+    - name: biome
+      glob: "*.{js,mjs,cjs,ts,tsx,json,jsonc}"
+      run: pnpm exec biome check --no-errors-on-unmatched {staged_files}
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+    - name: no-ai-attribution
+      run: sh scripts/check-commit-msg.sh {1}
+
+pre-push:
+  jobs:
+    - name: verify
+      run: pnpm verify

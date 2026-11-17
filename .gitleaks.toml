@@ -1,0 +1,7 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "empty placeholder values in .env.example"
+targetRules = ["generic-api-key"]
+paths = ['''^\.env\.example$''']
