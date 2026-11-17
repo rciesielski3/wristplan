@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { callOf, event, input, reply, setup } from "../../../test/intervals-helpers.js";
-import { IntervalsResponseError, loadIntervalsConfig } from "./index.js";
+import { callOf, event, input, reply, setup } from "../../../test/intervals-helpers";
+import { IntervalsResponseError, loadIntervalsConfig } from "./index";
 
 describe("loadIntervalsConfig", () => {
   it("defaults athlete id to 0", () => {

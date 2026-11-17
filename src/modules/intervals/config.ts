@@ -1,4 +1,4 @@
-import { IntervalsConfigError } from "./errors.js";
+import { IntervalsConfigError } from "./errors";
 
 export interface IntervalsConfig {
   readonly apiKey: string;

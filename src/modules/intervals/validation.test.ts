@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { event, input, reply, setup, setupOwnedDelete } from "../../../test/intervals-helpers.js";
-import { createIntervalsClient, IntervalsValidationError } from "./index.js";
+import { event, input, reply, setup, setupOwnedDelete } from "../../../test/intervals-helpers";
+import { createIntervalsClient, IntervalsValidationError } from "./index";
 
 const badDates = [
   "2026-02-30",

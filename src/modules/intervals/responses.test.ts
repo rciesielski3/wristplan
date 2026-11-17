@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { event, input, reply, setup, setupOwnedDelete } from "../../../test/intervals-helpers.js";
+import { event, input, reply, setup, setupOwnedDelete } from "../../../test/intervals-helpers";
 import {
   createIntervalsClient,
   IntervalsApiError,
   IntervalsNotFoundError,
   IntervalsResponseError,
   IntervalsValidationError,
-} from "./index.js";
+} from "./index";
 
 describe("response guards (create)", () => {
   const { id: _i, ...noId } = event;

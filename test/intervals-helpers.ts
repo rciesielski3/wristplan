@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { createIntervalsClient } from "../src/modules/intervals/index.js";
+import { createIntervalsClient } from "../src/modules/intervals/index";
 
 export const KEY = "fake-intervals-test-key";
 export const TOKEN = Buffer.from(`API_KEY:${KEY}`).toString("base64");
