@@ -1,6 +1,6 @@
 # wristplan
 
-TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. No code in `src/` yet; tooling is bootstrapped.
+TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code lives in `src/modules/`; so far only the intervals.icu client.
 
 ## Commands
 
@@ -11,16 +11,16 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. No c
 
 ## Layout
 
-- `src/modules/**` — domain logic (pure). Coverage threshold: 90% lines and branches.
-- `src/integrations/` — I/O adapters behind interfaces.
+- `src/modules/**` — one folder per module. Coverage threshold: 90% lines and branches.
+- `src/modules/intervals` — intervals.icu HTTP client (client, config, errors); `fetch` is injectable for tests. I/O clients live under `modules/<integration>` while there is one integration; extract adapters to `src/integrations/` once more exist.
 - `test/` — contract and cross-module tests.
 - Commit scopes mirror modules: activities, workouts, calendar, analytics, intervals, garmin, lib, repo, ci, deps.
 
 ## Conventions
 
 - TypeScript strict plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `verbatimModuleSyntax`. No `any`, no non-null assertions without a reason.
-- Domain logic separated from I/O.
-- Tests: deterministic, no real network or time, synthetic fixtures only (no real activity data, GPS, IDs, tokens). Live tests only with `LIVE_TESTS=1`. Never lower coverage thresholds or weaken assertions.
+- Keep domain logic separated from I/O; I/O is confined to integration clients with injectable transport.
+- Tests: deterministic, no real network or time, synthetic fixtures only (no real activity data, GPS, IDs, tokens). Live tests only with `LIVE_TESTS=1`. Use fake, low-entropy test credentials (gitleaks flags high-entropy fakes). Tests run through the default guarded paths; shared helpers live in `test/`. Never lower coverage thresholds or weaken assertions.
 - Comments only for a non-obvious "why".
 - Smallest change that meets the AC. DRY, KISS, YAGNI. Justify every new dependency in the commit body.
 - Dependencies are pinned to exact versions (no `^`).
@@ -30,10 +30,15 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. No c
 - Never read `.env`; secrets are read at runtime only. Never log or print them.
 - Never invent API endpoints or payloads; verify against official docs.
 - Anything that modifies real intervals.icu or Garmin data needs explicit confirmation.
+- Ownership: workouts created by the app carry `external_id` starting with `wristplan-`. Reschedule of events without it always throws `IntervalsForeignEventError`; delete throws it unless `allowForeign: true` is passed. Never pass `allowForeign` without explicit user confirmation.
 
 ## Git
 
 - Conventional Commits, `type(scope): subject`, imperative, lowercase, <=72 chars. Types: feat, fix, refactor, perf, test, build, ci, chore, revert.
 - No AI attribution or `Co-Authored-By`. Never change git config. Never push without asking.
+- `main` is protected: PR required, checks `verify` and `conventional-title`, branch up to date, squash-only, linear history. Flow: branch -> PR -> review by an agent other than the author -> squash merge only if the reviewer says safe.
+- If merge is blocked as BEHIND: `gh pr update-branch <n> --rebase`, wait for CI, then merge. Confirm the merge landed (`gh pr view`, `git log`) before reporting it.
+- commitlint body lines <=100 chars.
+- Node 22 required (`.nvmrc`, `engine-strict=true`): `source ~/.nvm/nvm.sh && nvm use 22`.
 - Hooks (lefthook): gitleaks + biome on commit, commitlint on message, `pnpm verify` on push.
 - `CLAUDE.md`, `AGENTS.md` and `.claude/` (agents, settings) are tracked. Never commit `.ai/`, `.claude/settings.local.json`, plans, notes or ADRs.

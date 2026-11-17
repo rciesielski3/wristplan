@@ -11,7 +11,7 @@ Rules:
 - Read CLAUDE.md and the task's acceptance criteria first.
 - Smallest change that satisfies the AC. DRY, KISS, YAGNI. No speculative abstractions.
 - TypeScript strict, no `any`, no non-null assertions without a reason.
-- Pure domain logic separated from I/O. Integrations live behind interfaces in `src/integrations/`.
+- Keep domain logic separated from I/O. I/O clients live in `src/modules/<integration>` with injectable transport (see AGENTS.md Layout).
 - No narrative comments. Comment only a non-obvious "why".
 - Never invent API endpoints; verify against official docs and cite the doc URL in your report.
 - Never read `.env` or print secrets.
