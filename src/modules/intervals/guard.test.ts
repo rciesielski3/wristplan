@@ -17,9 +17,10 @@ import {
   OWNED_EXTERNAL_ID_PREFIX,
 } from "./index.js";
 
-const foreign = [
+const foreign: { name: string; ext: string | null | undefined }[] = [
   { name: "foreign external_id", ext: "abc" },
   { name: "null external_id", ext: null },
+  { name: "absent external_id", ext: undefined },
   { name: "prefix without leading match", ext: "x-wristplan-1" },
 ];
 
