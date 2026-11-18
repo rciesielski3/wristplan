@@ -11,9 +11,9 @@
   },
   "packageManager": "pnpm@9.15.4",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 127.0.0.1",
     "prepare": "lefthook install",
     "format": "biome format --write .",
     "lint": "biome lint .",

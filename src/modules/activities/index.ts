@@ -1,3 +1,12 @@
+export { formatDistance, formatDuration, formatText, formatTimestamp } from "./format";
+export {
+  handleFitDownload,
+  handleSync,
+  isHostAllowed,
+  rejectCrossOrigin,
+  type SyncRouteDeps,
+} from "./http";
+export { ACTIVITY_LIST_LIMIT, latestSyncRun, listActivities } from "./queries";
 export {
   type SyncActivitiesOptions,
   SyncInProgressError,
