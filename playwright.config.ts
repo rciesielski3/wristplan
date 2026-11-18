@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const port = 3000;
+const port = Number(process.env.E2E_PORT ?? 3100);
+const origin = `http://127.0.0.1:${port}`;
 
 export default defineConfig({
   testDir: "e2e",
@@ -8,14 +9,15 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? "github" : "list",
   use: {
-    baseURL: `http://localhost:${port}`,
+    baseURL: origin,
     trace: "on-first-retry",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm build && pnpm start",
-    url: `http://localhost:${port}`,
-    reuseExistingServer: !process.env.CI,
+    command: `rm -f e2e.db && pnpm exec prisma migrate deploy && pnpm build && pnpm start -p ${port}`,
+    env: { DATABASE_URL: "file:./e2e.db" },
+    url: origin,
+    reuseExistingServer: false,
     timeout: 180_000,
   },
 });

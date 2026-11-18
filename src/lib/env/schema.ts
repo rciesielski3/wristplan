@@ -12,6 +12,7 @@ export const envSchema = z.object({
   DATABASE_URL: text(z.string().regex(/^file:\S/)),
   INTERVALS_API_KEY: text(z.string().optional()),
   GARMIN_PERSONAL_API_KEY: text(z.string().optional()),
+  ALLOWED_HOSTS: text(z.string().optional()),
   INTERVALS_ATHLETE_ID: text(
     z
       .string()
