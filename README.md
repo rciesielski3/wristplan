@@ -1,12 +1,12 @@
 # wristplan
 
-Plan workouts and sync them to your watch. A Next.js app that integrates intervals.icu and Garmin Connect.
+Reads your activities from Garmin and builds workouts to schedule on intervals.icu. A Next.js app. Implemented now: activity sync from Garmin and the workout builder; scheduling and publishing to intervals.icu exist in the service layer only (publishing UI not yet available).
 
 Works with Garmin Connect; not affiliated with Garmin.
 
 ## Requirements
 
-- Node 22 (see `.nvmrc`)
+- Node >=22.13 (see `.nvmrc`)
 - pnpm
 
 ## Setup
@@ -34,22 +34,30 @@ API (same-origin, Host-guarded; mutations also reject cross-origin requests): `G
 
 ## Commands
 
-| Command       | Purpose                                                                                           |
-| ------------- | ------------------------------------------------------------------------------------------------- |
-| `pnpm verify` | Full gate: biome, typecheck, unit tests with coverage                                             |
-| `pnpm test`   | Unit tests (vitest)                                                                               |
-| `pnpm e2e`    | Playwright smoke tests on a throwaway `e2e.db` (run `pnpm exec playwright install chromium` once) |
+| Command              | Purpose                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------- |
+| `pnpm dev`           | Next.js dev server on 127.0.0.1:3000                                                              |
+| `pnpm build`         | Production build                                                                                  |
+| `pnpm start`         | Serve the production build on 127.0.0.1                                                           |
+| `pnpm lint`          | biome lint                                                                                        |
+| `pnpm typecheck`     | `next typegen` and `tsc --noEmit` (needs `DATABASE_URL`)                                          |
+| `pnpm test`          | Unit tests (vitest)                                                                               |
+| `pnpm test:coverage` | Unit tests with coverage                                                                          |
+| `pnpm verify`        | Full gate: biome, typecheck, unit tests with coverage (needs `DATABASE_URL`)                      |
+| `pnpm e2e`           | Playwright smoke tests on a throwaway `e2e.db` (run `pnpm exec playwright install chromium` once) |
+| `pnpm format`        | biome format --write                                                                              |
+| `pnpm db:migrate`    | `prisma migrate deploy` using `DATABASE_URL` from `.env`                                          |
 
 ## Environment variables
 
-| Name                      | Description                                        |
-| ------------------------- | -------------------------------------------------- |
-| `DATABASE_URL`            | Required, SQLite file, starts with `file:`         |
-| `INTERVALS_API_KEY`       | Optional, intervals.icu API key                    |
-| `GARMIN_PERSONAL_API_KEY` | Optional, Garmin personal API key                  |
-| `ALLOWED_HOSTS`           | Optional, extra allowed hostnames, comma-separated |
-| `INTERVALS_ATHLETE_ID`    | intervals.icu athlete id, defaults to `0`          |
-| `NODE_ENV`                | `development`, `test` or `production`              |
+| Name                      | Description                                                      |
+| ------------------------- | ---------------------------------------------------------------- |
+| `DATABASE_URL`            | Required, SQLite file, starts with `file:`                       |
+| `INTERVALS_API_KEY`       | Optional, intervals.icu API key; no route uses it yet            |
+| `GARMIN_PERSONAL_API_KEY` | Optional, Garmin personal API key                                |
+| `ALLOWED_HOSTS`           | Optional, extra allowed hostnames, comma-separated               |
+| `INTERVALS_ATHLETE_ID`    | intervals.icu athlete id, defaults to `0`                        |
+| `NODE_ENV`                | `development`, `test` or `production`, defaults to `development` |
 
 ## Security
 

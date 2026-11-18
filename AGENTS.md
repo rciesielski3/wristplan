@@ -1,26 +1,27 @@
 # wristplan
 
-TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code lives in `src/modules/`; so far only the intervals.icu client.
+TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and intervals.icu. Code lives in `src/modules/` (activities, garmin, intervals, workouts, calendar), `src/lib/` (db, env, http), `src/app/` (Next.js UI and routes), `prisma/` and `e2e/`.
 
 ## Commands
 
-- `pnpm verify` — full gate: `biome check .`, `tsc --noEmit`, vitest with coverage. Must pass before every commit.
+- `pnpm verify` — full gate: `biome check .`, `pnpm typecheck` (`next typegen && tsc --noEmit`), vitest with coverage. Must pass before every commit.
 - `pnpm test` / `pnpm test:coverage` — vitest (`src/**/*.test.ts`, `test/**/*.test.ts`).
-- `pnpm format` — biome format --write.
-- `pnpm lint` / `pnpm typecheck`.
+- `pnpm e2e` — Playwright smoke tests; builds and serves on its own port (3100) with a throwaway `e2e.db`.
+- `pnpm db:migrate` — `prisma migrate deploy` using `DATABASE_URL` from `.env`.
+- `pnpm dev` / `pnpm build` / `pnpm start` — Next.js; dev and start bind to 127.0.0.1.
+- `pnpm format` — biome format --write. `pnpm lint` — biome lint.
+- `pnpm verify`, `pnpm typecheck` and `next` need `DATABASE_URL` (CI sets `file:./ci.db`; locally it comes from `.env`).
 
 ## Layout
 
 - `src/modules/**` — one folder per module. Coverage threshold: 90% lines and branches.
-- `src/modules/intervals` — intervals.icu HTTP client (client, config, errors); `fetch` is injectable for tests. I/O clients live under `modules/<integration>` while there is one integration; extract adapters to `src/integrations/` once more exist.
-- `src/modules/garmin` — Garmin Personal API read client (client, config, errors, zip): token exchange with JWT cache, activity list, FIT download; `fetch` and `now` injectable. Retry/backoff is left to the sync service.
-- `src/lib/**` — shared code; `lib/env` validates environment variables with zod (`parseEnv`, `getEnv`); `lib/db` is the Prisma + SQLite client (`createDb`, `getDb`; schema in `prisma/`, generated client in gitignored `src/generated/`). `lib/http` is the shared Host allowlist + cross-origin guard (`isHostAllowed`, `rejectForeignHost`, `rejectCrossOrigin`) used by every route. Same 90% threshold.
-- `src/modules/workouts` — workout domain: zod model (steps, repeats, one target type per workout, and one power unit for power), `validateWorkout`/`parseWorkout` with path+message issues, `toIntervalsText` serialiser (HR + repeat text verified live (spike S1); pace, power, distance and sub-minute/padded times follow documented syntax but are unverified live; pace ordering slow-fast is the likeliest to be wrong).
-- `src/modules/workouts` also holds the pure form<->model conversion (`form.ts`), `summarizeWorkout` and the `/api/workouts` handlers (`http.ts`, injected repository, 64 KiB JSON cap); `src/app/workouts` is the thin builder UI (client form validates with the same pure code, server re-validates).
-  - Persistence: `createWorkoutRepository(db)` (Prisma `Workout`, injected `db`; create/get/list/update/delete/duplicate/createFromTemplate; corrupt stored rows throw `WorkoutCorruptError` and are skipped by `list`). The repository passes unexpected database errors through unmapped; HTTP layers must map unknown errors to a generic 500 and never echo `error.message`.
-- `test/` — contract and cross-module tests.
-- `src/modules/activities` — Garmin→SQLite activity sync service (`syncActivities`): paged, idempotent upserts, FIT stored once, run log in `SyncRun`; Garmin client, db, `now` and `sleep` injected. Also `handleSync`/`handleFitDownload` (HTTP handlers with origin guard, deps injected), list queries and formatters; `src/app` holds only thin Next wrappers (`POST /api/sync`, `GET /api/activities/[id]/fit`, home page, `SyncButton`).
-- `src/modules/calendar` — workout scheduling domain: `WorkoutPublisher` port (publish/reschedule/remove, typed `Publisher*` errors with fixed messages), `createIntervalsPublisher` adapter (default ownership guard, no `allowForeign`), and `createScheduleService` (`ScheduledWorkout` rows: pending/published/failed, `retry`, reschedule/unschedule propagate; transient retries capped, `now`/`sleep` injected; the FK to `Workout` is `Restrict`). `test/publisher-contract.ts` is the reusable contract suite for any publisher (a future Garmin Training API adapter must pass it).
+- `src/modules/intervals` — intervals.icu HTTP client (client, config, errors); `fetch` is injectable for tests. I/O clients live under `modules/<integration>` while there are few integrations; extract adapters to `src/integrations/` once more exist.
+- `src/modules/garmin`, `activities`, `workouts`, `calendar` — Garmin client, activity sync/storage, workout model/builder/repository, scheduling with the intervals publisher.
+- `src/lib/**` — shared code: `db`, `env` (zod, `parseEnv`, `getEnv`), `http`. Same 90% threshold.
+- `src/app/**` — Next.js pages and thin route wrappers; excluded from coverage.
+- `prisma/` — schema and migrations.
+- `e2e/` — Playwright specs.
+- `test/` — shared helpers, fakes (intervals server, publisher) and the publisher contract suite.
 - Commit scopes mirror modules: activities, workouts, calendar, analytics, intervals, garmin, lib, repo, ci, deps.
 
 ## Conventions
@@ -36,9 +37,12 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code
 ## Safety
 
 - Never read `.env`; secrets are read at runtime only. Never log or print them.
+- Never start `next dev`/`next start` or call `POST /api/sync` from an agent: a populated `.env` makes it hit the real Garmin API. e2e runs on its own port/db and never clicks Sync.
 - Never invent API endpoints or payloads; verify against official docs.
 - Anything that modifies real intervals.icu or Garmin data needs explicit confirmation.
 - Ownership: workouts created by the app carry `external_id` starting with `wristplan-`. Reschedule of events without it always throws `IntervalsForeignEventError`; delete throws it unless `allowForeign: true` is passed. Never pass `allowForeign` without explicit user confirmation.
+- Workout text: only HR + repeat text is verified live (spike S1); pace, power, distance and padded times are unverified live (pace ordering slow-fast is the likeliest to be wrong).
+- HTTP layers map unknown errors to a generic 500 and never echo `error.message` (repositories pass database errors through unmapped).
 
 ## Git
 
