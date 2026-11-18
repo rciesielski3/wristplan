@@ -16,6 +16,7 @@ TypeScript (ESM, Node >=22, pnpm) app integrating intervals.icu and Garmin. Code
 - `src/modules/garmin` — Garmin Personal API read client (client, config, errors, zip): token exchange with JWT cache, activity list, FIT download; `fetch` and `now` injectable. Retry/backoff is left to the sync service.
 - `src/lib/**` — shared code; `lib/env` validates environment variables with zod (`parseEnv`, `getEnv`); `lib/db` is the Prisma + SQLite client (`createDb`, `getDb`; schema in `prisma/`, generated client in gitignored `src/generated/`). Same 90% threshold.
 - `test/` — contract and cross-module tests.
+- `src/modules/activities` — Garmin→SQLite activity sync service (`syncActivities`): paged, idempotent upserts, FIT stored once, run log in `SyncRun`; Garmin client, db, `now` and `sleep` injected.
 - Commit scopes mirror modules: activities, workouts, calendar, analytics, intervals, garmin, lib, repo, ci, deps.
 
 ## Conventions
