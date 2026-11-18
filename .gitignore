@@ -19,3 +19,4 @@ KICKOFF_PROMPT.md
 *.db*
 .DS_Store
 tsconfig.tsbuildinfo
+src/generated/
