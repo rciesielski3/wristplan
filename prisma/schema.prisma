@@ -19,4 +19,17 @@ model Activity {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   lastSyncedAt     DateTime
+  fitFile          Bytes?
+  fitDownloadedAt  DateTime?
+}
+
+model SyncRun {
+  id           String    @id @default(cuid())
+  startedAt    DateTime
+  finishedAt   DateTime?
+  status       String
+  imported     Int       @default(0)
+  updated      Int       @default(0)
+  failed       Int       @default(0)
+  errorMessage String?
 }

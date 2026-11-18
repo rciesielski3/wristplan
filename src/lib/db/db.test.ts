@@ -1,24 +1,7 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createDb, type Db, getDb } from "./index";
-
-const MIGRATIONS = new URL("../../../prisma/migrations/", import.meta.url);
-
-function migrate(file: string): void {
-  const sqlite = new DatabaseSync(file);
-  try {
-    for (const dir of readdirSync(MIGRATIONS, { withFileTypes: true })) {
-      if (dir.isDirectory()) {
-        sqlite.exec(readFileSync(new URL(`${dir.name}/migration.sql`, MIGRATIONS), "utf8"));
-      }
-    }
-  } finally {
-    sqlite.close();
-  }
-}
+import { createTestDb, type TestDb } from "../../../test/db-helpers";
+import { type Db, getDb } from "./index";
 
 const startTime = new Date("2026-01-02T03:04:05.000Z");
 const data = (name: string) => ({
@@ -32,19 +15,16 @@ const data = (name: string) => ({
 });
 
 describe("db", () => {
-  let dir: string;
+  let t: TestDb;
   let db: Db;
 
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), "wristplan-db-"));
-    const file = join(dir, "test.db");
-    migrate(file);
-    db = createDb(`file:${file}`);
+    t = createTestDb();
+    db = t.db;
   });
 
   afterEach(async () => {
-    await db.$disconnect();
-    rmSync(dir, { recursive: true, force: true });
+    await t.cleanup();
     vi.unstubAllEnvs();
   });
 
@@ -70,7 +50,7 @@ describe("db", () => {
   });
 
   it("getDb builds one cached client from DATABASE_URL", async () => {
-    vi.stubEnv("DATABASE_URL", `file:${join(dir, "cached.db")}`);
+    vi.stubEnv("DATABASE_URL", `file:${join(t.dir, "cached.db")}`);
     const first = getDb();
     expect(getDb()).toBe(first);
     await first.$disconnect();
