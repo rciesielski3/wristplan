@@ -41,5 +41,25 @@ model Workout {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
+  scheduled ScheduledWorkout[]
+
   @@index([isTemplate, updatedAt])
+}
+
+model ScheduledWorkout {
+  id            String    @id @default(cuid())
+  workoutId     String
+  workout       Workout   @relation(fields: [workoutId], references: [id], onDelete: Restrict)
+  date          String
+  status        String
+  externalId    String    @unique
+  remoteEventId String?
+  lastError     String?
+  publishedAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([workoutId, date])
+  @@index([date])
+  @@index([status])
 }
