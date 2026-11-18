@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb, type TestDb } from "../../../test/db-helpers";
+import { rejectCrossOrigin } from "../../lib/http";
 import type { GarminClient } from "../garmin";
-import { handleFitDownload, handleSync, rejectCrossOrigin } from "./index";
+import { handleFitDownload, handleSync } from "./index";
 
 const HOST = "localhost:3000";
 const req = (headers: Record<string, string> = {}, method = "POST") =>

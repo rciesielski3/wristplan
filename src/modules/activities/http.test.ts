@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDb, type TestDb } from "../../../test/db-helpers";
+import { isHostAllowed, rejectCrossOrigin } from "../../lib/http";
 import { type GarminClient, GarminConfigError } from "../garmin";
-import { handleFitDownload, handleSync, isHostAllowed, rejectCrossOrigin } from "./index";
+import { handleFitDownload, handleSync } from "./index";
 import { SyncInProgressError, type SyncResult } from "./sync";
 
 const HOST = "localhost:3000";
@@ -163,5 +164,24 @@ describe("handleFitDownload", () => {
 
   it.each(["1002", "9999", "abc", '1001"; x=', "../1001", ""])("404 for %j", async (id) => {
     expect((await handleFitDownload(req({}, "GET"), id, t.db)).status).toBe(404);
+  });
+});
+
+describe("handleSync default sync service", () => {
+  let t: TestDb;
+  beforeEach(() => {
+    t = createTestDb();
+  });
+  afterEach(() => t.cleanup());
+
+  it("runs the real sync against an injected fake client when no sync override is given", async () => {
+    const fake = {
+      listActivities: vi.fn().mockResolvedValue([]),
+      downloadActivityFit: vi.fn(),
+    } as unknown as GarminClient;
+    const res = await handleSync(req(), { db: () => t.db, garmin: () => fake });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ status: "succeeded", imported: 0, failed: 0 });
+    expect(fake.listActivities).toHaveBeenCalled();
   });
 });

@@ -22,6 +22,8 @@ const TARGET_LABEL: Record<TargetType, string> = {
   power: "power",
 };
 
+const UNIT_LABEL = { watts: "watts", percent_ftp: "%FTP" } as const;
+
 const formatPath = (path: readonly PropertyKey[]): string =>
   path.reduce<string>(
     (acc, seg) =>
@@ -36,20 +38,33 @@ const mixedTargetIssues = (workout: Workout): WorkoutIssue[] => {
           label: `step ${i + 1}.${j + 1}`,
           path: `steps[${i}].steps[${j}].target`,
           type: inner.target.type,
+          unit: inner.target.type === "power" ? inner.target.unit : undefined,
         }))
-      : [{ label: `step ${i + 1}`, path: `steps[${i}].target`, type: s.target.type }],
+      : [
+          {
+            label: `step ${i + 1}`,
+            path: `steps[${i}].target`,
+            type: s.target.type,
+            unit: s.target.type === "power" ? s.target.unit : undefined,
+          },
+        ],
   );
   const first = labelled[0];
-  return labelled.flatMap((t) =>
-    first && t.type !== first.type
-      ? [
-          {
-            path: t.path,
-            message: `${t.label} uses ${TARGET_LABEL[t.type]} but ${first.label} uses ${TARGET_LABEL[first.type]}; a workout must use one target type`,
-          },
-        ]
-      : [],
-  );
+  const firstPower = labelled.find((t) => t.unit !== undefined);
+  return labelled.flatMap((t) => {
+    const issues: WorkoutIssue[] = [];
+    if (first && t.type !== first.type)
+      issues.push({
+        path: t.path,
+        message: `${t.label} uses ${TARGET_LABEL[t.type]} but ${first.label} uses ${TARGET_LABEL[first.type]}; a workout must use one target type`,
+      });
+    if (firstPower?.unit && t.unit && t.unit !== firstPower.unit)
+      issues.push({
+        path: `${t.path}.unit`,
+        message: `${t.label} uses ${UNIT_LABEL[t.unit]} but ${firstPower.label} uses ${UNIT_LABEL[firstPower.unit]}; a workout must use one power unit`,
+      });
+    return issues;
+  });
 };
 
 const MAX_KEYS_SHOWN = 3;

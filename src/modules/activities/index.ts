@@ -2,8 +2,6 @@ export { formatDistance, formatDuration, formatText, formatTimestamp } from "./f
 export {
   handleFitDownload,
   handleSync,
-  isHostAllowed,
-  rejectCrossOrigin,
   type SyncRouteDeps,
 } from "./http";
 export { ACTIVITY_LIST_LIMIT, latestSyncRun, listActivities } from "./queries";

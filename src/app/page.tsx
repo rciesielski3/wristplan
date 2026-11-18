@@ -1,27 +1,28 @@
-import { headers } from "next/headers";
-import { notFound } from "next/navigation";
+import Link from "next/link";
 import { connection } from "next/server";
 import { getDb } from "../lib/db";
-import { getEnv } from "../lib/env";
 import {
   formatDistance,
   formatDuration,
   formatText,
   formatTimestamp,
-  isHostAllowed,
   latestSyncRun,
   listActivities,
 } from "../modules/activities";
 import { SyncButton } from "./SyncButton";
+import { requireAllowedHost } from "./workoutDeps";
 
 export default async function Page() {
   await connection();
-  if (!isHostAllowed((await headers()).get("host"), getEnv().ALLOWED_HOSTS)) notFound();
+  await requireAllowedHost();
   const db = getDb();
   const [activities, run] = await Promise.all([listActivities(db), latestSyncRun(db)]);
 
   return (
     <main>
+      <nav aria-label="Main">
+        <Link href="/workouts">Workouts</Link>
+      </nav>
       <h1>wristplan</h1>
       <p>Plan workouts and sync them to your watch.</p>
 

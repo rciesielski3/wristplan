@@ -91,17 +91,19 @@ describe("toIntervalsText golden", () => {
       seed = (seed * 1103515245 + 12345) % 2147483648;
       return (seed % n) + 1;
     };
+    let unit = "watts";
     const targets = [
       () => hr(rnd(5)),
       () => ({ type: "pace", fastSecPerKm: 120 + rnd(100), slowSecPerKm: 400 + rnd(100) }),
       () => ({
         type: "power",
-        unit: rnd(2) === 1 ? "watts" : "percent_ftp",
+        unit,
         min: rnd(100),
         max: 100 + rnd(100),
       }),
     ];
     for (let i = 0; i < 200; i++) {
+      unit = rnd(2) === 1 ? "watts" : "percent_ftp";
       const makeTarget = targets[rnd(3) - 1] ?? targets[0];
       const steps = Array.from({ length: rnd(5) }, () => ({
         kind: "work",
@@ -151,6 +153,26 @@ describe("validation", () => {
       path: "steps[1].steps[0].target",
       message: "step 2.1 uses heart rate but step 1 uses power; a workout must use one target type",
     });
+  });
+
+  it("rejects mixed power units with an actionable message", () => {
+    const power = (unit: string) => ({ type: "power", unit, min: 50, max: 100 });
+    const w = withSteps([
+      { kind: "warmup", end: time(60), target: power("watts") },
+      {
+        kind: "repeat",
+        times: 2,
+        steps: [{ kind: "work", end: time(60), target: power("percent_ftp") }],
+      },
+      { kind: "cooldown", end: time(60), target: power("watts") },
+    ]);
+    expect(issues(w)).toEqual([
+      {
+        path: "steps[1].steps[0].target.unit",
+        message: "step 2.1 uses %FTP but step 1 uses watts; a workout must use one power unit",
+      },
+    ]);
+    expect(() => toIntervalsText(w as never)).toThrow(/one power unit/);
   });
 
   it("rejects nested repeats and warmups inside repeats", () => {
