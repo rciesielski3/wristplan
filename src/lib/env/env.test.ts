@@ -1,9 +1,10 @@
 import { inspect } from "node:util";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EnvError, getEnv, parseEnv } from "./index";
 
 const SECRET = "fake-secret-value";
-const defaults = { INTERVALS_ATHLETE_ID: "0", NODE_ENV: "development" };
+const DB = { DATABASE_URL: "file:./x.db" };
+const defaults = { ...DB, INTERVALS_ATHLETE_ID: "0", NODE_ENV: "development" };
 
 function failure(env: unknown): EnvError {
   try {
@@ -15,12 +16,14 @@ function failure(env: unknown): EnvError {
   throw new Error("expected EnvError");
 }
 
-const invalid = (...names: string[]) =>
-  `Invalid environment: ${names.map((n) => `${n} (invalid)`).join(", ")}`;
+const reasons = (reason: string, names: string[]) =>
+  `Invalid environment: ${names.map((n) => `${n} (${reason})`).join(", ")}`;
+const invalid = (...names: string[]) => reasons("invalid", names);
+const missing = (...names: string[]) => reasons("missing", names);
 
 describe("parseEnv valid", () => {
-  it("accepts an empty env and applies defaults", () => {
-    expect(parseEnv({})).toEqual(defaults);
+  it("accepts a minimal env and applies defaults", () => {
+    expect(parseEnv(DB)).toEqual(defaults);
   });
 
   it("trims and keeps provided values", () => {
@@ -43,7 +46,7 @@ describe("parseEnv valid", () => {
 
   it.each(["", "   ", "\t\n"])("treats blank %j as absent or default", (blank) => {
     const env = parseEnv({
-      DATABASE_URL: blank,
+      ...DB,
       INTERVALS_API_KEY: blank,
       GARMIN_PERSONAL_API_KEY: blank,
       INTERVALS_ATHLETE_ID: blank,
@@ -53,11 +56,11 @@ describe("parseEnv valid", () => {
   });
 
   it.each(["development", "test", "production"])("accepts NODE_ENV %s", (value) => {
-    expect(parseEnv({ NODE_ENV: value }).NODE_ENV).toBe(value);
+    expect(parseEnv({ ...DB, NODE_ENV: value }).NODE_ENV).toBe(value);
   });
 
   it.each(["a", "A_b-9", "i123", "0"])("accepts athlete id %j", (value) => {
-    expect(parseEnv({ INTERVALS_ATHLETE_ID: value }).INTERVALS_ATHLETE_ID).toBe(value);
+    expect(parseEnv({ ...DB, INTERVALS_ATHLETE_ID: value }).INTERVALS_ATHLETE_ID).toBe(value);
   });
 
   it.each(["file:./x.db", "file:/abs/x.db", "file:x.db", "file:./a b.db", "file:../x.db"])(
@@ -82,7 +85,14 @@ describe("parseEnv invalid", () => {
     ["NODE_ENV", "staging"],
     ["NODE_ENV", "Production"],
   ])("rejects %s=%j", (name, value) => {
-    expect(failure({ [name]: value }).message).toBe(invalid(name));
+    expect(failure({ ...DB, [name]: value }).message).toBe(invalid(name));
+  });
+
+  it.each([undefined, "", "  \t"])("reports missing DATABASE_URL for %j", (value) => {
+    expect(failure({ DATABASE_URL: value }).message).toBe(missing("DATABASE_URL"));
+    expect(failure({ DATABASE_URL: value, NODE_ENV: "staging" }).message).toBe(
+      "Invalid environment: DATABASE_URL (missing), NODE_ENV (invalid)",
+    );
   });
 
   it.each([5, ["x"], {}, true, null])("rejects non-string value %j without coercing", (value) => {
@@ -93,7 +103,7 @@ describe("parseEnv invalid", () => {
       "INTERVALS_ATHLETE_ID",
       "NODE_ENV",
     ]) {
-      expect(failure({ [name]: value }).message).toBe(invalid(name));
+      expect(failure({ ...DB, [name]: value }).message).toBe(invalid(name));
     }
   });
 
@@ -126,7 +136,7 @@ describe("EnvError never leaks input", () => {
 
   for (const [name, build] of Object.entries(fields)) {
     it.each(hostile)(`${name} with hostile value %#`, (value) => {
-      const error = failure({ [name]: build(value) });
+      const error = failure({ ...DB, [name]: build(value) });
       expect(error.message).toBe(invalid(name));
       expect(error.cause).toBeUndefined();
       const surfaces = [
@@ -144,6 +154,7 @@ describe("EnvError never leaks input", () => {
 
 describe("environment access", () => {
   afterEach(() => vi.unstubAllEnvs());
+  beforeEach(() => vi.stubEnv("DATABASE_URL", "file:./env.db"));
 
   it("parseEnv ignores process.env when a source is given", () => {
     vi.stubEnv("DATABASE_URL", "postgres://ignored");

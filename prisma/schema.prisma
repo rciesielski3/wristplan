@@ -1,0 +1,22 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Activity {
+  id               String   @id @default(cuid())
+  garminActivityId String   @unique
+  name             String?
+  sport            String?
+  startTime        DateTime
+  durationSeconds  Float?
+  distanceMeters   Float?
+  syncStatus       String   @default("synced")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  lastSyncedAt     DateTime
+}

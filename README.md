@@ -14,10 +14,11 @@ Works with Garmin Connect; not affiliated with Garmin.
 ```sh
 pnpm install
 cp .env.example .env
+pnpm db:migrate
 pnpm dev
 ```
 
-The app is served at http://localhost:3000.
+`pnpm db:migrate` (`prisma migrate deploy`) creates the local SQLite file from `DATABASE_URL` (loaded from `.env`; fails if it is missing). Relative `file:` paths resolve from the repo root; `pnpm install` generates the Prisma client. The app is served at http://localhost:3000.
 
 ## Commands
 
@@ -29,13 +30,13 @@ The app is served at http://localhost:3000.
 
 ## Environment variables
 
-| Name                      | Description                               |
-| ------------------------- | ----------------------------------------- |
-| `DATABASE_URL`            | Optional, must start with `file:`         |
-| `INTERVALS_API_KEY`       | Optional, intervals.icu API key           |
-| `GARMIN_PERSONAL_API_KEY` | Optional, Garmin personal API key         |
-| `INTERVALS_ATHLETE_ID`    | intervals.icu athlete id, defaults to `0` |
-| `NODE_ENV`                | `development`, `test` or `production`     |
+| Name                      | Description                                |
+| ------------------------- | ------------------------------------------ |
+| `DATABASE_URL`            | Required, SQLite file, starts with `file:` |
+| `INTERVALS_API_KEY`       | Optional, intervals.icu API key            |
+| `GARMIN_PERSONAL_API_KEY` | Optional, Garmin personal API key          |
+| `INTERVALS_ATHLETE_ID`    | intervals.icu athlete id, defaults to `0`  |
+| `NODE_ENV`                | `development`, `test` or `production`      |
 
 ## Security
 

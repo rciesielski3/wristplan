@@ -7,7 +7,7 @@
   "author": "Rafał Ciesielski",
   "repository": "github:rciesielski3/wristplan",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.13"
   },
   "packageManager": "pnpm@9.15.4",
   "scripts": {
@@ -21,7 +21,9 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
-    "verify": "biome check . && pnpm typecheck && pnpm test:coverage"
+    "verify": "biome check . && pnpm typecheck && pnpm test:coverage",
+    "db:migrate": "node --env-file=.env node_modules/prisma/build/index.js migrate deploy",
+    "postinstall": "prisma generate"
   },
   "devDependencies": {
     "@biomejs/biome": "2.6.8",
@@ -33,13 +35,23 @@
     "@types/react-dom": "19.3.0",
     "@vitest/coverage-v8": "5.1.0",
     "lefthook": "2.2.2",
+    "prisma": "7.10.1",
     "typescript": "7.0.2",
     "vitest": "5.1.0"
   },
   "dependencies": {
+    "@prisma/adapter-better-sqlite3": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "better-sqlite3": "12.11.1",
     "next": "16.4.6",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "zod": "4.6.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "lefthook"
+    ]
   }
 }
