@@ -444,6 +444,22 @@ describe("workout repository", () => {
     } as never);
     await expect(odd.list()).rejects.toThrow("row exploded");
   });
+
+  it("treats a stored row with mixed power units as corrupt", async () => {
+    const power = (unit: string) => ({ type: "power", unit, min: 50, max: 90 });
+    const definition = JSON.stringify({
+      name: "mixed",
+      sport: "run",
+      steps: [
+        { kind: "warmup", end: { type: "time", seconds: 60 }, target: power("watts") },
+        { kind: "work", end: { type: "time", seconds: 60 }, target: power("percent_ftp") },
+      ],
+    });
+    const row = await t.db.workout.create({ data: { definition } });
+    await expect(repo.get(row.id)).rejects.toBeInstanceOf(WorkoutCorruptError);
+    expect((await repo.list()).corruptIds).toEqual([row.id]);
+    await repo.delete(row.id);
+  });
 });
 
 describe("workout migration", () => {

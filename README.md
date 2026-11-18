@@ -26,6 +26,12 @@ Open http://127.0.0.1:3000 and press **Sync now** to import Garmin activities in
 
 wristplan is a single-user app with no authentication. `pnpm dev` and `pnpm start` bind to `127.0.0.1` only; do not expose it to a network or the internet. As a defence against DNS rebinding, the sync and FIT endpoints and the home page accept only `Host` values `localhost`, `127.0.0.1` and `[::1]` (any port); set `ALLOWED_HOSTS` (comma-separated hostnames) to allow more. `POST /api/sync` also rejects browser requests whose `Origin` or `Sec-Fetch-Site` is not same-origin; non-browser clients such as `curl` send neither header and are accepted, so loopback binding is the real access control.
 
+## Workouts
+
+`/workouts` lists workouts and templates (duplicate, delete, save as template, use template); `/workouts/new` and `/workouts/<id>/edit` open the builder. A workout has steps (warmup, work, recovery, cooldown), repeat groups (no nesting) and one target type for the whole workout (heart rate zone, pace range or power) and, for power, one unit (watts or % FTP) with a value range per step. The form shows validation issues and the intervals.icu text preview live; the server re-validates every save. Nothing is sent to intervals.icu or Garmin yet.
+
+API (same-origin, Host-guarded; mutations also reject cross-origin requests): `GET|POST /api/workouts` (`?templates=true|false`), `GET|PUT|DELETE /api/workouts/<id>`, `POST /api/workouts/<id>/duplicate` (`?asTemplate=true`), `POST /api/workouts/<id>/use-template`, `GET /api/workouts/<id>/text` (text/plain preview). Validation errors return 422 with `issues` (path and message).
+
 ## Commands
 
 | Command       | Purpose                                                                                           |
