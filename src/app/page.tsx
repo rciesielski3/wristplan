@@ -21,7 +21,7 @@ export default async function Page() {
   return (
     <main>
       <nav aria-label="Main">
-        <Link href="/workouts">Workouts</Link>
+        <Link href="/workouts">Workouts</Link> <Link href="/calendar">Calendar</Link>
       </nav>
       <h1>wristplan</h1>
       <p>Plan workouts and sync them to your watch.</p>

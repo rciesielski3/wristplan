@@ -9,6 +9,17 @@ export {
   ScheduleValidationError,
 } from "./errors";
 export {
+  addDays,
+  buildGrid,
+  type CalendarGrid,
+  type CalendarView,
+  DEFAULT_VIEW,
+  localDay,
+  parseAnchor,
+  parseView,
+  weekStart,
+} from "./grid";
+export {
   handleList as handleScheduleList,
   handleReschedule,
   handleRetry,
@@ -17,6 +28,7 @@ export {
   type ScheduleRouteDeps,
 } from "./http";
 export { createIntervalsPublisher } from "./intervals-publisher";
+export { scheduleErrorMessage } from "./messages";
 export {
   PublisherAuthError,
   PublisherError,
@@ -37,3 +49,10 @@ export {
   type ScheduleServiceOptions,
   type ScheduleStatus,
 } from "./schedule";
+export {
+  type ActivityItem,
+  type CalendarData,
+  type CalendarDay,
+  loadCalendar,
+  type ScheduledItem,
+} from "./view";

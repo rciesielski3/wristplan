@@ -12,7 +12,16 @@ export default defineConfig({
     baseURL: origin,
     trace: "on-first-retry",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "chromium", testIgnore: "calendar.spec.ts", use: { ...devices["Desktop Chrome"] } },
+    // Seeds rows that the home page lists, so it runs only after the other specs finished.
+    {
+      name: "calendar",
+      testMatch: "calendar.spec.ts",
+      dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+  ],
   webServer: {
     command: `rm -f e2e.db && pnpm exec prisma migrate deploy && pnpm build && pnpm start -p ${port}`,
     env: { DATABASE_URL: "file:./e2e.db" },
