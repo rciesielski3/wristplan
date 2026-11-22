@@ -28,6 +28,15 @@ export {
   type ScheduleRouteDeps,
 } from "./http";
 export { createIntervalsPublisher } from "./intervals-publisher";
+export {
+  activitySport,
+  type MatchActivity,
+  type MatchPair,
+  type MatchResult,
+  type MatchScheduled,
+  matchWorkouts,
+  type WorkoutSport,
+} from "./match";
 export { scheduleErrorMessage } from "./messages";
 export {
   PublisherAuthError,
