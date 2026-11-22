@@ -6,7 +6,7 @@ TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and interval
 
 - `pnpm verify` — full gate: `biome check .`, `pnpm typecheck` (`next typegen && tsc --noEmit`), vitest with coverage. Must pass before every commit.
 - `pnpm test` / `pnpm test:coverage` — vitest (`src/**/*.test.ts`, `test/**/*.test.ts`).
-- `pnpm e2e` — Playwright smoke tests; builds and serves on its own port (3100) with a throwaway `e2e.db`.
+- `pnpm e2e` — Playwright: smoke, workouts and calendar specs; the `calendar` project runs after `chromium` (it seeds rows). Builds and serves on its own port (3100) with a throwaway `e2e.db`. Never click Sync, Schedule, Retry, Reschedule or Remove (they hit real Garmin/intervals.icu); Link, No match and Unlink only write `e2e.db`.
 - `pnpm db:migrate` — `prisma migrate deploy` using `DATABASE_URL` from `.env`.
 - `pnpm dev` / `pnpm build` / `pnpm start` — Next.js; dev and start bind to 127.0.0.1.
 - `pnpm format` — biome format --write. `pnpm lint` — biome lint.
@@ -18,9 +18,9 @@ TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and interval
 - `src/modules/intervals` — intervals.icu HTTP client (client, config, errors); `fetch` is injectable for tests. I/O clients live under `modules/<integration>` while there are few integrations; extract adapters to `src/integrations/` once more exist.
 - `src/modules/garmin`, `activities`, `workouts`, `calendar` — Garmin client, activity sync/storage, workout model/builder/repository, scheduling with the intervals publisher.
 - `src/lib/**` — shared code: `db`, `env` (zod, `parseEnv`, `getEnv`), `http`. Same 90% threshold.
-- `src/app/**` — Next.js pages and thin route wrappers; excluded from coverage.
+- `src/app/**` — Next.js pages (home, `workouts`, `calendar`) and thin route wrappers (`api/sync`, `api/activities/[id]/fit`, `api/workouts`, `api/schedule` incl. `[id]/retry` and `[id]/link`); excluded from coverage.
 - `prisma/` — schema and migrations.
-- `e2e/` — Playwright specs.
+- `e2e/` — Playwright specs (`smoke`, `workouts`, `calendar`).
 - `test/` — shared helpers, fakes (intervals server, publisher) and the publisher contract suite.
 - Commit scopes mirror modules: activities, workouts, calendar, analytics, intervals, garmin, lib, repo, ci, deps.
 
@@ -36,11 +36,12 @@ TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and interval
 
 ## Safety
 
-- Never read `.env`; secrets are read at runtime only. Never log or print them.
+- Never read `.env`; secrets are read at runtime only. Never log or print them. Agents never run `pnpm db:migrate`/`prisma migrate` against the dev database or touch `dev.db`.
 - Never start `next dev`/`next start` or call `POST /api/sync` from an agent: a populated `.env` makes it hit the real Garmin API. e2e runs on its own port/db and never clicks Sync.
 - Never invent API endpoints or payloads; verify against official docs.
 - Anything that modifies real intervals.icu or Garmin data needs explicit confirmation.
 - Ownership: workouts created by the app carry `external_id` starting with `wristplan-`. Reschedule of events without it always throws `IntervalsForeignEventError`; delete throws it unless `allowForeign: true` is passed. Never pass `allowForeign` without explicit user confirmation.
+- Calendar loader (`modules/calendar/view`): activities are keyed by `garminActivityId`; a link is passed to the matcher only when `matchSource` is `manual`.
 - Workout text: only HR + repeat text is verified live (spike S1); pace, power, distance and padded times are unverified live (pace ordering slow-fast is the likeliest to be wrong).
 - HTTP layers map unknown errors to a generic 500 and never echo `error.message` (repositories pass database errors through unmapped).
 
