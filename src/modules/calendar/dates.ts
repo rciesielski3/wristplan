@@ -5,7 +5,7 @@ export const MAX_PAST_DAYS = 366;
 export const MAX_FUTURE_DAYS = 731;
 export const MAX_LIST_RANGE_DAYS = 366;
 
-const toIso = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+export const toIso = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
 
 export function parseDay(value: string): number {
   const match = typeof value === "string" ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value) : null;
