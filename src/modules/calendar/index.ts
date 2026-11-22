@@ -3,10 +3,19 @@ export {
   ScheduleConflictError,
   ScheduleForeignEventError,
   ScheduleListOverflowError,
+  ScheduleNotConfiguredError,
   ScheduleNotFoundError,
   SchedulePublishError,
   ScheduleValidationError,
 } from "./errors";
+export {
+  handleList as handleScheduleList,
+  handleReschedule,
+  handleRetry,
+  handleSchedule,
+  handleUnschedule,
+  type ScheduleRouteDeps,
+} from "./http";
 export { createIntervalsPublisher } from "./intervals-publisher";
 export {
   PublisherAuthError,

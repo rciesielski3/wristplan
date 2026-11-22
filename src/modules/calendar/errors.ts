@@ -36,3 +36,10 @@ export class ScheduleListOverflowError extends Error {
     super("too many scheduled workouts in range; narrow the date range");
   }
 }
+
+export class ScheduleNotConfiguredError extends Error {
+  override readonly name = "ScheduleNotConfiguredError";
+  constructor() {
+    super("intervals.icu is not configured");
+  }
+}
