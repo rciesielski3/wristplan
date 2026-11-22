@@ -1,7 +1,8 @@
 import { expect, test } from "@playwright/test";
 
-// Read-only: this spec must never click Schedule, Retry, Reschedule, Remove or Sync, because those
-// publish to the real intervals.icu account or call Garmin when the server has credentials.
+// This spec must never click Schedule, Retry, Reschedule, Remove or Sync, because those publish to
+// the real intervals.icu account or call Garmin when the server has credentials. Link, No match
+// and Unlink only write the local e2e.db and may be clicked.
 
 const ANCHOR = "2026-06-17";
 
@@ -38,6 +39,7 @@ test.beforeAll(async () => {
   workout.run("e2e-cal-w1", definition("Cal easy run"));
   workout.run("e2e-cal-w2", definition("Cal tempo"));
   workout.run("e2e-cal-w3", definition("Cal long"));
+  workout.run("e2e-cal-w4", definition("Cal matched run"));
   const scheduled = db.prepare(
     'INSERT INTO "ScheduledWorkout" (id, workoutId, date, status, externalId, lastError, updatedAt) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)',
   );
@@ -58,16 +60,35 @@ test.beforeAll(async () => {
     "PublisherAuthError (401)",
   );
   scheduled.run("e2e-cal-s3", "e2e-cal-w3", "2026-06-30", "pending", "wristplan-e2e-cal-s3", null);
-  db.prepare(
+  scheduled.run(
+    "e2e-cal-s4",
+    "e2e-cal-w4",
+    "2026-06-15",
+    "published",
+    "wristplan-e2e-cal-s4",
+    null,
+  );
+  const activity = db.prepare(
     'INSERT INTO "Activity" (id, garminActivityId, name, sport, startTime, durationSeconds, distanceMeters, updatedAt, lastSyncedAt) VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)',
-  ).run(
+  );
+  // Garmin ids must be numeric for the link API; the row ids keep the cleanup prefix.
+  activity.run(
     "e2e-cal-a1",
-    "e2e-cal-g1",
+    "9000000001",
     "Cal morning ride",
     "cycling",
     "2026-06-16T10:00:00.000Z",
     3725,
     20500,
+  );
+  activity.run(
+    "e2e-cal-a2",
+    "9000000002",
+    "Cal same-day run",
+    "running",
+    "2026-06-15T07:00:00.000Z",
+    660,
+    3000,
   );
   db.close();
 });
@@ -103,6 +124,51 @@ test("week view shows scheduled workouts, statuses and activities", async ({ pag
   await expect(page.getByRole("table").getByText("Cal long")).toHaveCount(0);
 });
 
+test("shows auto matches, unplanned activities and unmatched plans", async ({ page }) => {
+  await page.goto(`/calendar?view=week&date=${ANCHOR}`);
+
+  const matched = page.getByRole("list", { name: "Scheduled on 2026-06-15" });
+  await expect(matched.getByText("Matched (auto)")).toBeVisible();
+  await expect(matched).toContainText("Planned 10:00 vs actual 11:00, 3.00 km, delta +1:00");
+  await expect(matched).toContainText("Cal same-day run (running) on 2026-06-15");
+  await expect(page.getByRole("list", { name: "Completed on 2026-06-15" })).toHaveCount(0);
+  await expect(page.getByText("Cal same-day run")).toHaveCount(1);
+
+  const notDone = page.getByRole("list", { name: "Scheduled on 2026-06-16" });
+  await expect(notDone.getByText("Planned, not done")).toBeVisible();
+  const unplanned = page.getByRole("list", { name: "Completed on 2026-06-16" });
+  await expect(unplanned.getByText("Unplanned activity")).toBeVisible();
+  await expect(
+    notDone.getByText("Only changes wristplan's local data; nothing is sent to intervals.icu."),
+  ).toBeVisible();
+});
+
+test("manual link, no match and unlink only change local data", async ({ page }) => {
+  await page.goto(`/calendar?view=week&date=${ANCHOR}`);
+  const plan = page.getByRole("list", { name: "Scheduled on 2026-06-18" });
+
+  await plan
+    .getByLabel("Activity to link to Cal tempo")
+    .selectOption({ label: "Cal morning ride, 2026-06-16, cycling" });
+  await plan.getByRole("button", { name: "Link Cal tempo", exact: true }).click();
+  await expect(plan.getByText("Matched (manual)")).toBeVisible();
+  await expect(plan).toContainText("Cal morning ride (cycling) on 2026-06-16");
+  await expect(plan).toContainText("Planned 10:00 vs actual 1:02:05, 20.50 km, delta +52:05");
+  await expect(page.getByRole("list", { name: "Completed on 2026-06-16" })).toHaveCount(0);
+  await expect(page.getByText("Cal morning ride")).toHaveCount(1);
+
+  await plan.getByRole("button", { name: "Unlink Cal tempo", exact: true }).click();
+  await expect(plan.getByText("Planned, not done")).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Completed on 2026-06-16" }).getByText("Unplanned activity"),
+  ).toBeVisible();
+
+  await plan.getByRole("button", { name: "No match for Cal tempo", exact: true }).click();
+  await expect(plan.getByText("No match (set manually)")).toBeVisible();
+  await plan.getByRole("button", { name: "Unlink Cal tempo", exact: true }).click();
+  await expect(plan.getByText("Planned, not done")).toBeVisible();
+});
+
 test("month view includes leading and trailing days and navigates", async ({ page }) => {
   await page.goto(`/calendar?view=month&date=${ANCHOR}`);
   await expect(page.getByRole("heading", { name: "June 2026" })).toBeVisible();
@@ -111,7 +177,9 @@ test("month view includes leading and trailing days and navigates", async ({ pag
   await expect(page.locator('time[datetime="2026-07-05"]')).toBeVisible();
   const pending = page.getByRole("list", { name: "Scheduled on 2026-06-30" });
   await expect(pending.getByText("Pending")).toBeVisible();
-  await expect(page.getByText("Cal morning ride")).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Completed on 2026-06-16" }).getByText("Cal morning ride"),
+  ).toBeVisible();
 
   await page.getByRole("link", { name: "Next" }).click();
   await expect(page).toHaveURL(/view=month&date=2026-07-01/);
