@@ -28,7 +28,16 @@ describe("request shape", () => {
       target: "HR",
       description: "- 10m Z1 HR",
       external_id: "wristplan-x-1",
+      uid: "wristplan-x-1",
     });
+  });
+
+  it("create sends uid equal to externalId", async () => {
+    const { client, fetchMock } = setup([reply(200, event)]);
+    await client.createWorkout({ ...input, externalId: "wristplan-other" });
+    const { body } = callOf(fetchMock);
+    expect(body.uid).toBe("wristplan-other");
+    expect(body.uid).toBe(body.external_id);
   });
 
   it.each(["HR", "PACE", "POWER", "AUTO"] as const)("passes target %s through", async (target) => {

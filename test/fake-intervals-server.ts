@@ -6,6 +6,7 @@ export const SERVER_KEY = "fake-intervals-test-key";
 interface Event {
   id: number;
   external_id: string | null;
+  uid: string;
   start_date_local: string;
   [key: string]: unknown;
 }
@@ -25,15 +26,16 @@ export function createFakeIntervalsServer() {
     const id = Number(url.pathname.split("/").pop());
     if (method === "POST") {
       const body = JSON.parse(String(init?.body)) as Event;
-      // Like the real API, a repeated external_id only updates when the caller asks for upsert.
+      // Like the real API, upsertOnUid matches the uid field only, never external_id.
       const upsert = url.searchParams.get("upsertOnUid") === "true";
-      for (const event of upsert ? events.values() : []) {
-        if (event.external_id === body.external_id) {
+      for (const event of upsert && body.uid ? events.values() : []) {
+        if (event.uid === body.uid) {
           Object.assign(event, body);
           return json(200, event);
         }
       }
-      const event = { ...body, id: next++ };
+      const id = next++;
+      const event = { ...body, id, uid: body.uid ?? `generated-${id}` };
       events.set(event.id, event);
       return json(200, event);
     }
@@ -57,7 +59,12 @@ export function createFakeIntervalsServer() {
     },
     seedForeign(date: string): number {
       const id = next++;
-      events.set(id, { id, external_id: null, start_date_local: `${date}T00:00:00` });
+      events.set(id, {
+        id,
+        uid: `seed-${id}`,
+        external_id: null,
+        start_date_local: `${date}T00:00:00`,
+      });
       return id;
     },
     respondWith(fn: ((method: string) => Response | undefined) | undefined) {

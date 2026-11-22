@@ -194,6 +194,8 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
         target: input.target,
         description: input.description,
         external_id: input.externalId,
+        // upsertOnUid matches `uid`, not external_id
+        uid: input.externalId,
       });
       return parseEvent("POST", eventsPath, raw);
     },
