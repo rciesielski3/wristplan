@@ -59,6 +59,10 @@ model ScheduledWorkout {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
+  // Plain string, no relation: a dangling id is tolerated at read time (see calendar/match.ts).
+  linkedGarminActivityId String? @unique
+  matchSource            String?
+
   @@unique([workoutId, date])
   @@index([date])
   @@index([status])

@@ -43,3 +43,10 @@ export class ScheduleNotConfiguredError extends Error {
     super("intervals.icu is not configured");
   }
 }
+
+export class ActivityNotFoundError extends Error {
+  override readonly name = "ActivityNotFoundError";
+  constructor() {
+    super("activity not found");
+  }
+}

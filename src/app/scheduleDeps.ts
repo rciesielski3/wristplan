@@ -2,16 +2,19 @@ import { getDb } from "../lib/db";
 import { getEnv } from "../lib/env";
 import {
   createIntervalsPublisher,
+  createLinkService,
   createScheduleService,
+  type LinkRouteDeps,
   ScheduleNotConfiguredError,
   type ScheduleRouteDeps,
 } from "../modules/calendar";
 import { createIntervalsClient } from "../modules/intervals";
 
-export const scheduleDeps = (): ScheduleRouteDeps => {
+export const scheduleDeps = (): ScheduleRouteDeps & LinkRouteDeps => {
   const env = getEnv();
   return {
     allowedHosts: env.ALLOWED_HOSTS,
+    linkService: () => createLinkService({ db: getDb() }),
     // list never touches the publisher, so it is safe without a key
     readService: () =>
       createScheduleService({
