@@ -17,7 +17,9 @@ describePublisherContract(
   () => {
     const server = createFakeIntervalsServer();
     return {
-      publisher: createIntervalsPublisher(server.client),
+      publisher: createIntervalsPublisher(server.client, {
+        now: () => new Date("2026-03-01T00:00:00Z"),
+      }),
       seedForeign: (date) => String(server.seedForeign(date)),
       dateOf: (id) => server.dateOf(Number(id)),
     };

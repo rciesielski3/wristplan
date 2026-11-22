@@ -31,3 +31,12 @@ export function assertListRange(from: string, to: string): void {
     throw new ScheduleValidationError(`range must be at most ${MAX_LIST_RANGE_DAYS} days`);
   }
 }
+
+// Every date a schedule row may legally hold, so a previously published event is always inside it.
+export function scheduleWindow(now: Date): { oldest: string; newest: string } {
+  const today = parseDay(toIso(now.getTime()));
+  return {
+    oldest: toIso(today - MAX_PAST_DAYS * DAY_MS),
+    newest: toIso(today + MAX_FUTURE_DAYS * DAY_MS),
+  };
+}

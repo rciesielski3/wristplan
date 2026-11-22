@@ -98,7 +98,7 @@ export function createScheduleService(options: ScheduleServiceOptions) {
   const record = async (id: string, err: unknown): Promise<Row> =>
     db.scheduledWorkout.update({ where: { id }, data: { lastError: redact(err) } });
 
-  // Re-reads the workout so a retry publishes its current definition.
+  // An already-published remote event is only rescheduled (date); name/text/target are not refreshed.
   async function attempt(row: Row): Promise<Schedule> {
     try {
       const { workout } = await workouts.get(row.workoutId);

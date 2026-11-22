@@ -37,7 +37,13 @@ export interface DeleteWorkoutOptions {
   readonly allowForeign?: boolean;
 }
 
+export interface DateWindow {
+  readonly oldest: string;
+  readonly newest: string;
+}
+
 export interface IntervalsClient {
+  findWorkoutByExternalId(externalId: string, window: DateWindow): Promise<IntervalsEvent | null>;
   createWorkout(input: CreateWorkoutInput): Promise<IntervalsEvent>;
   rescheduleWorkout(eventId: number, date: string): Promise<IntervalsEvent>;
   deleteWorkout(eventId: number, options?: DeleteWorkoutOptions): Promise<void>;
@@ -174,18 +180,42 @@ export function createIntervalsClient(options: IntervalsClientOptions): Interval
     return raw;
   }
 
+  function assertOwnedExternalId(externalId: unknown): asserts externalId is string {
+    if (typeof externalId !== "string" || !externalId) {
+      throw new IntervalsValidationError("externalId is required");
+    }
+    if (!hasOwnedPrefix(externalId)) {
+      throw new IntervalsValidationError(
+        `externalId must start with ${OWNED_EXTERNAL_ID_PREFIX} followed by a suffix`,
+      );
+    }
+  }
+
   return {
+    // The API ignores a client uid and upsertOnUid never matches external_id (live checks), so
+    // idempotency is a lookup by external_id over a date window.
+    async findWorkoutByExternalId(externalId, window) {
+      assertOwnedExternalId(externalId);
+      assertDate(window.oldest);
+      assertDate(window.newest);
+      const raw = await request(
+        "GET",
+        `${eventsPath}?oldest=${window.oldest}&newest=${window.newest}`,
+      );
+      if (!Array.isArray(raw)) {
+        throw new IntervalsResponseError("GET", eventsPath, "body is not an array");
+      }
+      const matches = raw.filter((item) => isRecord(item) && item.external_id === externalId);
+      if (matches.length > 1) {
+        throw new IntervalsResponseError("GET", eventsPath, "multiple events share external_id");
+      }
+      return matches.length === 0 ? null : parseEvent("GET", eventsPath, matches[0]);
+    },
+
     async createWorkout(input) {
       assertDate(input.date);
-      if (typeof input.externalId !== "string" || !input.externalId) {
-        throw new IntervalsValidationError("externalId is required");
-      }
-      if (!hasOwnedPrefix(input.externalId)) {
-        throw new IntervalsValidationError(
-          `externalId must start with ${OWNED_EXTERNAL_ID_PREFIX} followed by a suffix`,
-        );
-      }
-      const path = `${eventsPath}?upsertOnUid=true`;
+      assertOwnedExternalId(input.externalId);
+      const path = `${eventsPath}?upsertOnUid=false`;
       const raw = await request("POST", path, {
         category: "WORKOUT",
         type: input.type,

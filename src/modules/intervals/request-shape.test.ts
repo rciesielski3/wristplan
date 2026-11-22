@@ -17,7 +17,7 @@ describe("request shape", () => {
     await client.createWorkout(input);
     const c = callOf(fetchMock);
     expect(c.method).toBe("POST");
-    expect(c.url).toBe(`${BASE}/athlete/0/events?upsertOnUid=true`);
+    expect(c.url).toBe(`${BASE}/athlete/0/events?upsertOnUid=false`);
     expect(c.headers.get("authorization")).toBe(BASIC);
     expect(c.headers.get("content-type")).toBe("application/json");
     expect(c.body).toEqual({
@@ -31,22 +31,42 @@ describe("request shape", () => {
     });
   });
 
+  it("create never sends a uid", async () => {
+    const { client, fetchMock } = setup([reply(200, event)]);
+    await client.createWorkout(input);
+    expect(callOf(fetchMock).body).not.toHaveProperty("uid");
+  });
+
   it.each(["HR", "PACE", "POWER", "AUTO"] as const)("passes target %s through", async (target) => {
     const { client, fetchMock } = setup([reply(200, event)]);
     await client.createWorkout({ ...input, target });
     expect(callOf(fetchMock).body.target).toBe(target);
   });
 
-  it("repeated create with the same externalId always requests upsert with identical body", async () => {
+  it("repeated create with the same externalId sends identical requests", async () => {
     const { client, fetchMock } = setup([reply(200, event), reply(200, event)]);
     const first = await client.createWorkout(input);
     const second = await client.createWorkout(input);
     expect(second).toEqual(first);
     const [a, b] = [callOf(fetchMock, 0), callOf(fetchMock, 1)];
-    expect(a.url).toContain("upsertOnUid=true");
+    expect(a.url).toContain("upsertOnUid=false");
     expect(b.url).toBe(a.url);
     expect(b.rawBody).toBe(a.rawBody);
     expect(b.body.external_id).toBe("wristplan-x-1");
+  });
+
+  it("find issues an authorised GET with the window and no body", async () => {
+    const { client, fetchMock } = setup([reply(200, [event])]);
+    const found = await client.findWorkoutByExternalId("wristplan-x-1", {
+      oldest: "2026-01-01",
+      newest: "2026-02-01",
+    });
+    const c = callOf(fetchMock);
+    expect(c.method).toBe("GET");
+    expect(c.url).toBe(`${BASE}/athlete/0/events?oldest=2026-01-01&newest=2026-02-01`);
+    expect(c.headers.get("authorization")).toBe(BASIC);
+    expect(c.rawBody).toBeUndefined();
+    expect(found?.id).toBe(7);
   });
 
   it("reschedule issues GET without body then PUT with json content type, both authorised", async () => {

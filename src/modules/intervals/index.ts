@@ -1,6 +1,7 @@
 export {
   type CreateWorkoutInput,
   createIntervalsClient,
+  type DateWindow,
   type DeleteWorkoutOptions,
   type IntervalsClient,
   type IntervalsClientOptions,

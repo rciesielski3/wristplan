@@ -8,6 +8,7 @@ import {
   type WorkoutTarget,
 } from "../intervals";
 import type { TargetType } from "../workouts";
+import { scheduleWindow } from "./dates";
 import {
   PublisherAuthError,
   PublisherForeignEventError,
@@ -53,9 +54,22 @@ async function guarded<T>(call: () => Promise<T>): Promise<T> {
 }
 
 // Delete and reschedule rely on the client's default ownership guard; there is no bypass path here.
-export function createIntervalsPublisher(client: IntervalsClient): WorkoutPublisher {
+export function createIntervalsPublisher(
+  client: IntervalsClient,
+  options: { readonly now?: () => Date } = {},
+): WorkoutPublisher {
+  const now = options.now ?? (() => new Date());
   return {
     async publish(input) {
+      const existing = await guarded(() =>
+        client.findWorkoutByExternalId(input.externalId, scheduleWindow(now())),
+      );
+      if (existing) {
+        if (existing.startDateLocal.slice(0, 10) !== input.date) {
+          await guarded(() => client.rescheduleWorkout(existing.id, input.date));
+        }
+        return { remoteId: String(existing.id) };
+      }
       const event = await guarded(() =>
         client.createWorkout({
           name: input.name,

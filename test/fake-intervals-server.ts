@@ -6,6 +6,7 @@ export const SERVER_KEY = "fake-intervals-test-key";
 interface Event {
   id: number;
   external_id: string | null;
+  uid: string;
   start_date_local: string;
   [key: string]: unknown;
 }
@@ -24,18 +25,24 @@ export function createFakeIntervalsServer() {
     const url = new URL(String(input));
     const id = Number(url.pathname.split("/").pop());
     if (method === "POST") {
-      const body = JSON.parse(String(init?.body)) as Event;
-      // Like the real API, a repeated external_id only updates when the caller asks for upsert.
-      const upsert = url.searchParams.get("upsertOnUid") === "true";
-      for (const event of upsert ? events.values() : []) {
-        if (event.external_id === body.external_id) {
-          Object.assign(event, body);
-          return json(200, event);
-        }
-      }
-      const event = { ...body, id: next++ };
-      events.set(event.id, event);
+      // Live behaviour: a client uid is ignored and upsertOnUid never dedupes, so every POST creates.
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      const id = next++;
+      const event = { ...body, id, uid: `generated-${id}` } as Event;
+      events.set(id, event);
       return json(200, event);
+    }
+    if (method === "GET" && url.pathname.endsWith("/events")) {
+      const oldest = url.searchParams.get("oldest");
+      const newest = url.searchParams.get("newest");
+      if (!oldest || !newest) return json(422, { error: "oldest and newest are required" });
+      return json(
+        200,
+        [...events.values()].filter((e) => {
+          const day = e.start_date_local.slice(0, 10);
+          return day >= oldest && day <= newest;
+        }),
+      );
     }
     const event = events.get(id);
     if (!event) return json(404, { error: "not found" });
@@ -57,7 +64,12 @@ export function createFakeIntervalsServer() {
     },
     seedForeign(date: string): number {
       const id = next++;
-      events.set(id, { id, external_id: null, start_date_local: `${date}T00:00:00` });
+      events.set(id, {
+        id,
+        uid: `seed-${id}`,
+        external_id: null,
+        start_date_local: `${date}T00:00:00`,
+      });
       return id;
     },
     respondWith(fn: ((method: string) => Response | undefined) | undefined) {
