@@ -1,4 +1,4 @@
-import { json, rejectCrossOrigin, rejectForeignHost } from "../../lib/http";
+import { guarded as guard, HttpError, json, MAX_BODY_BYTES, readJson } from "../../lib/http";
 import {
   WorkoutCorruptError,
   WorkoutNotFoundError,
@@ -8,7 +8,7 @@ import {
 import { toIntervalsText } from "./text";
 import { WorkoutValidationError } from "./validate";
 
-export const MAX_BODY_BYTES = 64 * 1024;
+export { MAX_BODY_BYTES };
 // A 4 KiB body of invalid repeats yields ~1500 issues (~150 KB); cap the echo.
 export const MAX_ISSUES = 20;
 const MAX_ISSUE_TEXT = 300;
@@ -18,15 +18,6 @@ export interface WorkoutRouteDeps {
   readonly allowedHosts?: string | undefined;
 }
 
-class HttpError extends Error {
-  constructor(
-    readonly status: number,
-    readonly publicMessage: string,
-  ) {
-    super(publicMessage);
-  }
-}
-
 const serialize = (s: Awaited<ReturnType<WorkoutRepository["get"]>>) => ({
   id: s.id,
   isTemplate: s.isTemplate,
@@ -34,34 +25,6 @@ const serialize = (s: Awaited<ReturnType<WorkoutRepository["get"]>>) => ({
   updatedAt: s.updatedAt.toISOString(),
   workout: s.workout,
 });
-
-async function readJson(request: Request): Promise<unknown> {
-  const type = request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
-  if (type !== "application/json")
-    throw new HttpError(415, "content-type must be application/json");
-  const declared = Number(request.headers.get("content-length") ?? 0);
-  if (declared > MAX_BODY_BYTES) throw new HttpError(413, "body too large");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  if (request.body) {
-    const reader = request.body.getReader();
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > MAX_BODY_BYTES) {
-        await reader.cancel();
-        throw new HttpError(413, "body too large");
-      }
-      chunks.push(value);
-    }
-  }
-  try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
-  } catch {
-    throw new HttpError(400, "body is not valid JSON");
-  }
-}
 
 function toResponse(err: unknown): Response {
   if (err instanceof HttpError) return json({ error: err.publicMessage }, err.status);
@@ -85,22 +48,12 @@ function toResponse(err: unknown): Response {
   return json({ error: "internal error" }, 500);
 }
 
-async function guarded(
+const guarded = (
   request: Request,
   deps: WorkoutRouteDeps,
   mutates: boolean,
   run: () => Promise<Response>,
-): Promise<Response> {
-  const blocked = mutates
-    ? rejectCrossOrigin(request, deps.allowedHosts)
-    : rejectForeignHost(request, deps.allowedHosts);
-  if (blocked) return blocked;
-  try {
-    return await run();
-  } catch (err) {
-    return toResponse(err);
-  }
-}
+) => guard(request, deps.allowedHosts, mutates, run, toResponse);
 
 export function handleList(request: Request, deps: WorkoutRouteDeps): Promise<Response> {
   return guarded(request, deps, false, async () => {

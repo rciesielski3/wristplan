@@ -46,3 +46,60 @@ export function rejectCrossOrigin(request: Request, extraHosts?: string): Respon
   }
   return null;
 }
+
+export const MAX_BODY_BYTES = 64 * 1024;
+
+export class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly publicMessage: string,
+  ) {
+    super(publicMessage);
+  }
+}
+
+export async function readJson(request: Request): Promise<unknown> {
+  const type = request.headers.get("content-type")?.split(";")[0]?.trim().toLowerCase();
+  if (type !== "application/json")
+    throw new HttpError(415, "content-type must be application/json");
+  const declared = Number(request.headers.get("content-length") ?? 0);
+  if (declared > MAX_BODY_BYTES) throw new HttpError(413, "body too large");
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  if (request.body) {
+    const reader = request.body.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_BODY_BYTES) {
+        await reader.cancel();
+        throw new HttpError(413, "body too large");
+      }
+      chunks.push(value);
+    }
+  }
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  } catch {
+    throw new HttpError(400, "body is not valid JSON");
+  }
+}
+
+export async function guarded(
+  request: Request,
+  allowedHosts: string | undefined,
+  mutates: boolean,
+  run: () => Promise<Response>,
+  toResponse: (err: unknown) => Response,
+): Promise<Response> {
+  const blocked = mutates
+    ? rejectCrossOrigin(request, allowedHosts)
+    : rejectForeignHost(request, allowedHosts);
+  if (blocked) return blocked;
+  try {
+    return await run();
+  } catch (err) {
+    return toResponse(err);
+  }
+}
