@@ -32,6 +32,15 @@ describe("scheduleDeps", () => {
     expect(() => scheduleDeps().service()).toThrow(ScheduleNotConfiguredError);
   });
 
+  it("builds a link service without an API key", async () => {
+    expect(
+      await scheduleDeps()
+        .linkService()
+        .unlink("missing")
+        .catch((e: Error) => e.name),
+    ).toBe("ScheduleNotFoundError");
+  });
+
   it("builds a publishing service when a key is configured, without any network call", () => {
     state.key = "fake-key";
     const fetchSpy = vi.spyOn(globalThis, "fetch");

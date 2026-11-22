@@ -6,7 +6,7 @@ import { createDb, type Db } from "../src/lib/db/index";
 
 const MIGRATIONS = new URL("../prisma/migrations/", import.meta.url);
 
-export function migrate(file: string): void {
+export function migrate(file: string, upTo?: string): void {
   const sqlite = new DatabaseSync(file);
   try {
     const dirs = readdirSync(MIGRATIONS, { withFileTypes: true })
@@ -15,6 +15,7 @@ export function migrate(file: string): void {
       .sort();
     for (const name of dirs) {
       sqlite.exec(readFileSync(new URL(`${name}/migration.sql`, MIGRATIONS), "utf8"));
+      if (name === upTo) break;
     }
   } finally {
     sqlite.close();

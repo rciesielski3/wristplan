@@ -72,6 +72,8 @@ describe("schedule handlers", () => {
       "date",
       "id",
       "lastError",
+      "linkedGarminActivityId",
+      "matchSource",
       "publishedAt",
       "remoteEventId",
       "status",

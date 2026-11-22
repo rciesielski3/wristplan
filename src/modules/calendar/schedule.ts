@@ -30,6 +30,7 @@ const BACKOFF_BASE_MS = 1000;
 const UNIQUE_VIOLATION = "P2002";
 
 export type ScheduleStatus = "pending" | "published" | "failed";
+export type MatchSource = "manual" | "none";
 
 export interface Schedule {
   readonly id: string;
@@ -42,6 +43,8 @@ export interface Schedule {
   readonly publishedAt: Date | null;
   readonly createdAt: Date;
   readonly updatedAt: Date;
+  readonly linkedGarminActivityId: string | null;
+  readonly matchSource: MatchSource | null;
 }
 
 export interface ScheduleServiceOptions {
@@ -59,17 +62,26 @@ const redact = (err: unknown): string => {
   return err instanceof Error ? err.name : "UnknownError";
 };
 
-const isUniqueViolation = (err: unknown): boolean =>
-  typeof err === "object" && err !== null && "code" in err && err.code === UNIQUE_VIOLATION;
-
 const isRetryable = (err: unknown): boolean =>
   err instanceof PublisherRateLimitError || err instanceof PublisherTransientError;
 
-interface Row extends Omit<Schedule, "status"> {
+interface Row extends Omit<Schedule, "status" | "matchSource"> {
   status: string;
+  matchSource: string | null;
 }
 
-const toSchedule = (row: Row): Schedule => ({ ...row, status: row.status as ScheduleStatus });
+// An unknown stored value reads as auto (null) rather than failing the whole list.
+const toMatchSource = (v: string | null): MatchSource | null =>
+  v === "manual" || v === "none" ? v : null;
+
+export const toSchedule = (row: Row): Schedule => ({
+  ...row,
+  status: row.status as ScheduleStatus,
+  matchSource: toMatchSource(row.matchSource),
+});
+
+export const isUniqueViolation = (err: unknown): boolean =>
+  typeof err === "object" && err !== null && "code" in err && err.code === UNIQUE_VIOLATION;
 
 export function createScheduleService(options: ScheduleServiceOptions) {
   const { db, publisher } = options;
