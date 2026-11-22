@@ -498,7 +498,9 @@ describe("foreign key", () => {
 describe("with the intervals adapter", () => {
   it("runs the full lifecycle through the client", async () => {
     const server = createFakeIntervalsServer();
-    const s = make(createIntervalsPublisher(server.client) as unknown as FakePublisher);
+    const s = make(
+      createIntervalsPublisher(server.client, { now: () => NOW }) as unknown as FakePublisher,
+    );
     const row = await s.schedule(workoutId, DATE);
     expect(server.events.get(Number(row.remoteEventId))?.external_id).toBe(row.externalId);
     await s.reschedule(row.id, "2026-06-25");
@@ -511,7 +513,9 @@ describe("with the intervals adapter", () => {
 
   it("refuses to touch a foreign intervals event even if a row points at it", async () => {
     const server = createFakeIntervalsServer();
-    const s = make(createIntervalsPublisher(server.client) as unknown as FakePublisher);
+    const s = make(
+      createIntervalsPublisher(server.client, { now: () => NOW }) as unknown as FakePublisher,
+    );
     const foreign = server.seedForeign(DATE);
     const row = await t.db.scheduledWorkout.create({
       data: {
@@ -586,7 +590,9 @@ describe("ownership and error hygiene", () => {
 
   it("never reschedules or deletes a foreign event through the adapter, whatever the row says", async () => {
     const server = createFakeIntervalsServer();
-    const s = make(createIntervalsPublisher(server.client) as unknown as FakePublisher);
+    const s = make(
+      createIntervalsPublisher(server.client, { now: () => NOW }) as unknown as FakePublisher,
+    );
     const foreign = server.seedForeign(DATE);
     const row = await t.db.scheduledWorkout.create({
       data: {

@@ -28,7 +28,7 @@ let workoutId: string;
 const make = () =>
   createScheduleService({
     db: t.db,
-    publisher: createIntervalsPublisher(server.client),
+    publisher: createIntervalsPublisher(server.client, { now: () => NOW }),
     now: () => NOW,
     sleep: async () => {},
   });
@@ -41,9 +41,9 @@ beforeEach(async () => {
 
 afterEach(() => t.cleanup());
 
-describe("intervals publisher idempotency against the faithful fake", () => {
+describe("intervals publisher idempotency against the live-faithful fake", () => {
   it("publishing the same externalId on different dates yields one event on the latest date", async () => {
-    const publisher = createIntervalsPublisher(server.client);
+    const publisher = createIntervalsPublisher(server.client, { now: () => NOW });
     const first = await publisher.publish(publishInput);
     const second = await publisher.publish({ ...publishInput, date: "2026-06-27" });
     expect(second.remoteId).toBe(first.remoteId);
@@ -53,7 +53,9 @@ describe("intervals publisher idempotency against the faithful fake", () => {
 
   it("does not match a foreign event when publishing an owned workout", async () => {
     const foreignId = server.seedForeign(DATE);
-    const { remoteId } = await createIntervalsPublisher(server.client).publish(publishInput);
+    const { remoteId } = await createIntervalsPublisher(server.client, { now: () => NOW }).publish(
+      publishInput,
+    );
     expect(remoteId).not.toBe(String(foreignId));
     expect(server.events.size).toBe(2);
   });
@@ -70,7 +72,7 @@ describe("intervals publisher idempotency against the faithful fake", () => {
     const row = await service.retry(failed.id);
     expect(row.status).toBe("published");
     expect(server.events.size).toBe(1);
-    expect(server.events.get(Number(row.remoteEventId))?.uid).toBe(row.externalId);
+    expect(server.events.get(Number(row.remoteEventId))?.external_id).toBe(row.externalId);
   });
 
   it("recovers a crash before the row was marked published without a duplicate", async () => {
@@ -97,13 +99,13 @@ describe("intervals publisher idempotency against the faithful fake", () => {
     expect(await t.db.scheduledWorkout.count()).toBe(0);
   });
 
-  it("reschedule moves the same remote event and keeps its uid", async () => {
+  it("reschedule moves the same remote event and keeps its external id", async () => {
     const service = make();
     const row = await service.schedule(workoutId, DATE);
     await service.reschedule(row.id, "2026-06-25");
     const id = Number(row.remoteEventId);
     expect(server.events.size).toBe(1);
     expect(server.dateOf(id)).toBe("2026-06-25");
-    expect(server.events.get(id)?.uid).toBe(row.externalId);
+    expect(server.events.get(id)?.external_id).toBe(row.externalId);
   });
 });

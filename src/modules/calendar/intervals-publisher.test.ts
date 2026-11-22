@@ -21,16 +21,18 @@ const input: PublishInput = {
   target: "pace",
 };
 
+const NOW = new Date("2026-03-01T10:00:00Z");
+
 const setup = () => {
   const server = createFakeIntervalsServer();
-  return { server, publisher: createIntervalsPublisher(server.client) };
+  return { server, publisher: createIntervalsPublisher(server.client, { now: () => NOW }) };
 };
 
 describe("createIntervalsPublisher", () => {
   it("creates a Run workout carrying text, target and external id", async () => {
     const { server, publisher } = setup();
     const { remoteId } = await publisher.publish(input);
-    const [, init] = server.fetch.mock.calls[0] ?? [];
+    const [, init] = server.fetch.mock.calls.find(([, i]) => i?.method === "POST") ?? [];
     expect(JSON.parse(String(init?.body))).toMatchObject({
       type: "Run",
       target: "PACE",
@@ -102,13 +104,52 @@ describe("createIntervalsPublisher", () => {
     });
   });
 
-  it("never requests anything but upsert-by-external-id when creating", async () => {
+  it("looks the externalId up first, creates with upsertOnUid=false, then reschedules instead of creating", async () => {
     const { server, publisher } = setup();
     const a = await publisher.publish(input);
     const b = await publisher.publish({ ...input, date: "2026-03-03" });
     expect(b.remoteId).toBe(a.remoteId);
     expect(server.events.size).toBe(1);
-    expect(String(server.fetch.mock.calls[0]?.[0])).toContain("upsertOnUid=true");
+    const calls = server.fetch.mock.calls.map(([url, init]) => `${init?.method ?? "GET"} ${url}`);
+    expect(calls[0]).toContain(
+      "GET https://intervals.icu/api/v1/athlete/0/events?oldest=2025-02-28&newest=2028-03-01",
+    );
+    expect(calls[1]).toContain("POST ");
+    expect(calls[1]).toContain("upsertOnUid=false");
+    expect(calls.slice(2).map((c) => c.split(" ")[0])).toEqual(["GET", "GET", "PUT"]);
+  });
+
+  it("does not write when the found event is already on the requested date", async () => {
+    const { server, publisher } = setup();
+    await publisher.publish(input);
+    server.fetch.mockClear();
+    await publisher.publish(input);
+    expect(server.fetch.mock.calls.map(([, init]) => init?.method ?? "GET")).toEqual(["GET"]);
+  });
+
+  it("finds an event published on the earliest and latest allowed dates", async () => {
+    const { server, publisher } = setup();
+    for (const date of ["2025-02-28", "2028-03-01"]) {
+      const a = await publisher.publish({ ...input, externalId: `wristplan-${date}`, date });
+      const b = await publisher.publish({ ...input, externalId: `wristplan-${date}`, date });
+      expect(b.remoteId).toBe(a.remoteId);
+    }
+    expect(server.events.size).toBe(2);
+  });
+
+  it("maps duplicate remote matches to a rejection and creates nothing", async () => {
+    const { server, publisher } = setup();
+    await publisher.publish(input);
+    server.events.set(500, {
+      id: 500,
+      uid: "dup",
+      external_id: input.externalId,
+      start_date_local: "2026-03-02T00:00:00",
+    });
+    const error = await publisher.publish(input).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(PublisherRejectedError);
+    expect((error as Error).message).not.toContain("share external_id");
+    expect(server.events.size).toBe(2);
   });
 
   it.each([
@@ -118,7 +159,7 @@ describe("createIntervalsPublisher", () => {
   ] as const)("maps target %s to %s", async (target, expected) => {
     const { server, publisher } = setup();
     await publisher.publish({ ...input, target });
-    const [, init] = server.fetch.mock.calls[0] ?? [];
+    const [, init] = server.fetch.mock.calls.find(([, i]) => i?.method === "POST") ?? [];
     expect(JSON.parse(String(init?.body)).target).toBe(expected);
   });
 
@@ -156,6 +197,7 @@ describe("createIntervalsPublisher", () => {
   it("rethrows unknown errors untouched", async () => {
     const boom = new TypeError("bug");
     const publisher = createIntervalsPublisher({
+      findWorkoutByExternalId: () => Promise.reject(boom),
       createWorkout: () => Promise.reject(boom),
       rescheduleWorkout: () => Promise.reject(boom),
       deleteWorkout: () => Promise.reject(boom),

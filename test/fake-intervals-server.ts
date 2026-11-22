@@ -25,19 +25,24 @@ export function createFakeIntervalsServer() {
     const url = new URL(String(input));
     const id = Number(url.pathname.split("/").pop());
     if (method === "POST") {
-      const body = JSON.parse(String(init?.body)) as Event;
-      // Like the real API, upsertOnUid matches the uid field only, never external_id.
-      const upsert = url.searchParams.get("upsertOnUid") === "true";
-      for (const event of upsert && body.uid ? events.values() : []) {
-        if (event.uid === body.uid) {
-          Object.assign(event, body);
-          return json(200, event);
-        }
-      }
+      // Live behaviour: a client uid is ignored and upsertOnUid never dedupes, so every POST creates.
+      const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
       const id = next++;
-      const event = { ...body, id, uid: body.uid ?? `generated-${id}` };
-      events.set(event.id, event);
+      const event = { ...body, id, uid: `generated-${id}` } as Event;
+      events.set(id, event);
       return json(200, event);
+    }
+    if (method === "GET" && url.pathname.endsWith("/events")) {
+      const oldest = url.searchParams.get("oldest");
+      const newest = url.searchParams.get("newest");
+      if (!oldest || !newest) return json(422, { error: "oldest and newest are required" });
+      return json(
+        200,
+        [...events.values()].filter((e) => {
+          const day = e.start_date_local.slice(0, 10);
+          return day >= oldest && day <= newest;
+        }),
+      );
     }
     const event = events.get(id);
     if (!event) return json(404, { error: "not found" });

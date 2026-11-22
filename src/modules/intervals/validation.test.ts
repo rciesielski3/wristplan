@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { event, input, reply, setup, setupOwnedDelete } from "../../../test/intervals-helpers";
-import { createIntervalsClient, IntervalsValidationError } from "./index";
+import { createIntervalsClient, IntervalsResponseError, IntervalsValidationError } from "./index";
 
 const badDates = [
   "2026-02-30",
@@ -115,6 +115,56 @@ describe("apiKey handling", () => {
   it.each(["", "   "])("rejects apiKey %j at construction", (apiKey) => {
     expect(() => createIntervalsClient({ apiKey, athleteId: "0" })).toThrow(
       IntervalsValidationError,
+    );
+  });
+});
+
+describe("findWorkoutByExternalId validation and parsing", () => {
+  const window = { oldest: "2026-01-01", newest: "2026-02-01" };
+
+  it.each(["", "other-1", "wristplan-"])("rejects externalId %j without a request", async (id) => {
+    const { client, fetchMock } = setup();
+    await expect(client.findWorkoutByExternalId(id, window)).rejects.toBeInstanceOf(
+      IntervalsValidationError,
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-string externalId and invalid dates without a request", async () => {
+    const { client, fetchMock } = setup();
+    await expect(
+      client.findWorkoutByExternalId(undefined as unknown as string, window),
+    ).rejects.toBeInstanceOf(IntervalsValidationError);
+    await expect(
+      client.findWorkoutByExternalId("wristplan-x-1", { ...window, oldest: "2026-02-30" }),
+    ).rejects.toBeInstanceOf(IntervalsValidationError);
+    await expect(
+      client.findWorkoutByExternalId("wristplan-x-1", { ...window, newest: "nope" }),
+    ).rejects.toBeInstanceOf(IntervalsValidationError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("fails typed when the list body is not an array", async () => {
+    const { client } = setup([reply(200, { id: 1 })]);
+    await expect(client.findWorkoutByExternalId("wristplan-x-1", window)).rejects.toBeInstanceOf(
+      IntervalsResponseError,
+    );
+  });
+
+  it("ignores junk and foreign items and fails typed on a malformed match", async () => {
+    const other = { ...event, id: 8, external_id: "wristplan-other" };
+    const ok = setup([reply(200, [null, "x", 3, [], { id: 9, external_id: null }, other, event])]);
+    expect((await ok.client.findWorkoutByExternalId("wristplan-x-1", window))?.id).toBe(7);
+    const bad = setup([reply(200, [{ external_id: "wristplan-x-1", id: "7" }])]);
+    await expect(
+      bad.client.findWorkoutByExternalId("wristplan-x-1", window),
+    ).rejects.toBeInstanceOf(IntervalsResponseError);
+  });
+
+  it("fails typed on two matches", async () => {
+    const { client } = setup([reply(200, [event, { ...event, id: 8 }])]);
+    await expect(client.findWorkoutByExternalId("wristplan-x-1", window)).rejects.toBeInstanceOf(
+      IntervalsResponseError,
     );
   });
 });
