@@ -14,6 +14,7 @@ const input = (name: string, sport = "run") => ({
   steps: [{ kind: "work", end: { type: "time", seconds: 600 }, target: { type: "hr", zone: 2 } }],
 });
 const grid = buildGrid("week", "2026-06-17");
+const TODAY = "2026-06-17";
 
 let t: TestDb;
 const service = () =>
@@ -53,7 +54,7 @@ describe("loadCalendar", () => {
     });
     await activity("g1", "2026-06-16T23:30:00Z", {
       name: "Morning",
-      sport: "running",
+      sport: "cycling",
       durationSeconds: 1800,
       distanceMeters: 5000,
     });
@@ -61,7 +62,7 @@ describe("loadCalendar", () => {
     await activity("g3", "2026-06-22T00:00:00Z");
     await activity("g4", "2026-06-21T23:59:59Z");
 
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
 
     expect(data.notices).toEqual([]);
     expect(data.days["2026-06-16"]?.scheduled).toEqual([
@@ -72,10 +73,18 @@ describe("loadCalendar", () => {
         summary: "run, 1 step, 10:00",
         status: "failed",
         lastError: "PublisherAuthError (401)",
+        state: "missed",
+        matchSource: null,
+        linkMissing: false,
+        match: null,
+        linkCandidates: [
+          { id: "g1", label: "Morning, 2026-06-16, cycling" },
+          { id: "g4", label: "—, 2026-06-21, —" },
+        ],
       },
     ]);
     expect(data.days["2026-06-16"]?.activities).toEqual([
-      { id: "g1", name: "Morning", sport: "running", duration: "30:00", distance: "5.00 km" },
+      { id: "g1", name: "Morning", sport: "cycling", duration: "30:00", distance: "5.00 km" },
     ]);
     expect(Object.keys(data.days).sort()).toEqual(["2026-06-16", "2026-06-21"]);
     expect(data.workouts).toEqual(
@@ -91,7 +100,7 @@ describe("loadCalendar", () => {
     await t.db.scheduledWorkout.create({
       data: { workoutId: "bad", date: "2026-06-16", status: "pending", externalId: "wristplan-y" },
     });
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-16"]?.scheduled[0]).toMatchObject({
       name: "Unavailable workout",
       summary: "",
@@ -104,7 +113,7 @@ describe("loadCalendar", () => {
       ({
         list: () => Promise.reject(new ScheduleListOverflowError()),
       }) as unknown as ReturnType<typeof service>;
-    const data = await loadCalendar(t.db, overflowing, grid);
+    const data = await loadCalendar(t.db, overflowing, grid, TODAY);
     expect(data.notices[0]).toContain(String(SCHEDULE_LIST_LIMIT));
     expect(data.days["2026-06-16"]?.activities).toHaveLength(1);
   });
@@ -114,7 +123,7 @@ describe("loadCalendar", () => {
       ({ list: () => Promise.reject(new Error("db down")) }) as unknown as ReturnType<
         typeof service
       >;
-    await expect(loadCalendar(t.db, broken, grid)).rejects.toThrow("db down");
+    await expect(loadCalendar(t.db, broken, grid, TODAY)).rejects.toThrow("db down");
   });
 
   it("fetches workouts without a total duration summary", async () => {
@@ -130,7 +139,7 @@ describe("loadCalendar", () => {
     await t.db.scheduledWorkout.create({
       data: { workoutId: w.id, date: "2026-06-16", status: "published", externalId: "wristplan-z" },
     });
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-16"]?.scheduled[0]?.summary).toBe("run, 2 steps");
   });
 
@@ -152,7 +161,7 @@ describe("loadCalendar", () => {
     await t.db.scheduledWorkout.create({
       data: { workoutId: old.id, date: "2026-06-16", status: "pending", externalId: "wristplan-q" },
     });
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-16"]?.scheduled[0]?.name).toBe("Old one");
   });
 
@@ -164,7 +173,7 @@ describe("loadCalendar", () => {
         lastSyncedAt: new Date(),
       })),
     });
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-16"]?.activities).toHaveLength(ACTIVITY_LIST_LIMIT);
     expect(data.notices[0]).toContain("activities");
   });
@@ -179,12 +188,15 @@ describe("loadCalendar boundaries and degradation", () => {
     date,
     status: "pending",
     lastError: null,
+    createdAt: new Date("2026-06-01T00:00:00Z"),
+    linkedGarminActivityId: null,
+    matchSource: null,
   });
 
   it("includes activities exactly at 00:00Z of the first day and the last millisecond of the last day", async () => {
     await activity("first", "2026-06-15T00:00:00.000Z");
     await activity("last", "2026-06-21T23:59:59.999Z");
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-15"]?.activities.map((a) => a.id)).toEqual(["first"]);
     expect(data.days["2026-06-21"]?.activities.map((a) => a.id)).toEqual(["last"]);
   });
@@ -192,14 +204,14 @@ describe("loadCalendar boundaries and degradation", () => {
   it("excludes activities one millisecond before the range and exactly at to+1 00:00Z", async () => {
     await activity("before", "2026-06-14T23:59:59.999Z");
     await activity("after", "2026-06-22T00:00:00.000Z");
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days).toEqual({});
   });
 
   it("buckets activities by UTC day around midnight", async () => {
     await activity("late", "2026-06-16T23:59:59.999Z");
     await activity("early", "2026-06-17T00:00:00.000Z");
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-16"]?.activities.map((a) => a.id)).toEqual(["late"]);
     expect(data.days["2026-06-17"]?.activities.map((a) => a.id)).toEqual(["early"]);
   });
@@ -209,7 +221,7 @@ describe("loadCalendar boundaries and degradation", () => {
     process.env.TZ = "America/New_York";
     try {
       await activity("late", "2026-06-16T23:30:00.000Z");
-      const data = await loadCalendar(t.db, () => service(), grid);
+      const data = await loadCalendar(t.db, () => service(), grid, TODAY);
       expect(Object.keys(data.days)).toEqual(["2026-06-16"]);
     } finally {
       if (original === undefined) delete process.env.TZ;
@@ -222,14 +234,14 @@ describe("loadCalendar boundaries and degradation", () => {
     await activity("lead", "2026-06-01T00:00:00Z");
     await activity("trail", "2026-07-05T23:00:00Z");
     await activity("outside", "2026-07-06T00:00:00Z");
-    const data = await loadCalendar(t.db, () => service(), month);
+    const data = await loadCalendar(t.db, () => service(), month, TODAY);
     expect(Object.keys(data.days).sort()).toEqual(["2026-06-01", "2026-07-05"]);
   });
 
   it("orders activities within a day by start time", async () => {
     await activity("b", "2026-06-16T12:00:00Z");
     await activity("a", "2026-06-16T06:00:00Z");
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-16"]?.activities.map((a) => a.id)).toEqual(["a", "b"]);
   });
 
@@ -240,7 +252,7 @@ describe("loadCalendar boundaries and degradation", () => {
         data: { workoutId: w.id, date, status: "pending", externalId: `wristplan-r${i}` },
       });
     }
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(Object.keys(data.days).sort()).toEqual(["2026-06-15", "2026-06-21"]);
   });
 
@@ -263,7 +275,7 @@ describe("loadCalendar boundaries and degradation", () => {
       ),
     });
     await activity("g1", "2026-06-16T10:00:00Z");
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.notices).toHaveLength(1);
     expect(data.notices[0]).toContain(`More than ${SCHEDULE_LIST_LIMIT} scheduled`);
     expect(data.days["2026-06-16"]?.scheduled).toEqual([]);
@@ -282,7 +294,7 @@ describe("loadCalendar boundaries and degradation", () => {
       ({
         list: () => Promise.reject(new ScheduleListOverflowError()),
       }) as unknown as ReturnType<typeof service>;
-    const data = await loadCalendar(t.db, overflowing, grid);
+    const data = await loadCalendar(t.db, overflowing, grid, TODAY);
     expect(data.notices).toHaveLength(2);
   });
 
@@ -294,7 +306,7 @@ describe("loadCalendar boundaries and degradation", () => {
         lastSyncedAt: new Date(),
       })),
     });
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-16"]?.activities).toHaveLength(ACTIVITY_LIST_LIMIT);
     expect(data.notices).toEqual([]);
   });
@@ -308,7 +320,7 @@ describe("loadCalendar boundaries and degradation", () => {
       })),
     });
     await activity("latest", "2026-06-20T10:00:00Z");
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data.days["2026-06-20"]).toBeUndefined();
     expect(data.notices[0]).toContain("activities");
   });
@@ -319,11 +331,16 @@ describe("loadCalendar boundaries and degradation", () => {
   ])("propagates a %s from the schedule list", async (_n, err) => {
     const broken = () =>
       ({ list: () => Promise.reject(err) }) as unknown as ReturnType<typeof service>;
-    await expect(loadCalendar(t.db, broken, grid)).rejects.toBe(err);
+    await expect(loadCalendar(t.db, broken, grid, TODAY)).rejects.toBe(err);
   });
 
   it("shows 'Unavailable workout' for a row whose workout does not exist", async () => {
-    const data = await loadCalendar(t.db, fakeList([row("s1", "ghost", "2026-06-16")]), grid);
+    const data = await loadCalendar(
+      t.db,
+      fakeList([row("s1", "ghost", "2026-06-16")]),
+      grid,
+      TODAY,
+    );
     expect(data.days["2026-06-16"]?.scheduled[0]).toMatchObject({
       id: "s1",
       name: "Unavailable workout",
@@ -338,6 +355,7 @@ describe("loadCalendar boundaries and degradation", () => {
       t.db,
       fakeList([row("s1", "ghost", "2026-06-16"), row("s2", w.id, "2026-06-16")]),
       grid,
+      TODAY,
     );
     expect(data.days["2026-06-16"]?.scheduled.map((s) => s.name)).toEqual([
       "Unavailable workout",
@@ -346,7 +364,7 @@ describe("loadCalendar boundaries and degradation", () => {
   });
 
   it("returns empty data for an empty database", async () => {
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(data).toEqual({ days: {}, workouts: [], notices: [] });
   });
 
@@ -355,7 +373,7 @@ describe("loadCalendar boundaries and degradation", () => {
     await t.db.scheduledWorkout.create({
       data: { workoutId: "bad", date: "2026-06-16", status: "failed", externalId: "wristplan-b" },
     });
-    const data = await loadCalendar(t.db, () => service(), grid);
+    const data = await loadCalendar(t.db, () => service(), grid, TODAY);
     expect(JSON.stringify(data)).not.toContain("secret");
   });
 });

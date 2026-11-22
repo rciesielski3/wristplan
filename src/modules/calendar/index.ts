@@ -42,7 +42,7 @@ export {
   matchWorkouts,
   type WorkoutSport,
 } from "./match";
-export { scheduleErrorMessage } from "./messages";
+export { linkErrorMessage, scheduleErrorMessage } from "./messages";
 export {
   PublisherAuthError,
   PublisherError,
@@ -66,8 +66,14 @@ export {
 } from "./schedule";
 export {
   type ActivityItem,
+  CANDIDATE_LIMIT,
+  CANDIDATE_WINDOW_DAYS,
   type CalendarData,
   type CalendarDay,
+  formatDelta,
+  type LinkCandidate,
   loadCalendar,
+  type MatchInfo,
+  type MatchState,
   type ScheduledItem,
 } from "./view";

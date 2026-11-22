@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { getDb } from "../../lib/db";
+import { formatDistance, formatDuration } from "../../modules/activities";
 import {
   type ActivityItem,
   buildGrid,
   type CalendarDay,
   type CalendarView,
+  formatDelta,
   loadCalendar,
   localDay,
   parseAnchor,
@@ -14,7 +16,7 @@ import {
 } from "../../modules/calendar";
 import { scheduleDeps } from "../scheduleDeps";
 import { requireAllowedHost } from "../workoutDeps";
-import { ItemActions, ScheduleForm } from "./CalendarActions";
+import { ItemActions, LinkControls, ScheduleForm } from "./CalendarActions";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const STATUS_LABEL = { pending: "Pending", published: "Published", failed: "Failed" } as const;
@@ -25,16 +27,44 @@ const first = (value: string | string[] | undefined) => (Array.isArray(value) ? 
 const href = (view: CalendarView, date?: string) =>
   `/calendar?view=${view}${date === undefined ? "" : `&date=${date}`}`;
 
+const STATE_LABEL = {
+  matched: "Matched",
+  "no-match": "No match (set manually)",
+  missed: "Planned, not done",
+  planned: "Planned",
+} as const;
+
+const secondsText = (seconds: number | null) =>
+  seconds === null ? "n/a" : formatDuration(seconds);
+
 function Scheduled({ item }: { item: ScheduledItem }) {
+  const { match } = item;
   return (
     <li className={`item item-${item.status}`}>
       <strong>{item.name}</strong>{" "}
-      <span className={`badge badge-${item.status}`}>{STATUS_LABEL[item.status]}</span>
+      <span className={`badge badge-${item.status}`}>{STATUS_LABEL[item.status]}</span>{" "}
+      <span className="badge">{match ? `Matched (${match.source})` : STATE_LABEL[item.state]}</span>
       {item.summary ? <div>{item.summary}</div> : null}
+      {match ? (
+        <div>
+          Planned {secondsText(match.plannedSeconds)} vs actual{" "}
+          {secondsText(match.activity.durationSeconds)},{" "}
+          {formatDistance(match.activity.distanceMeters)}, delta {formatDelta(match.deltaSeconds)}
+          <br />
+          {match.activity.name} ({match.activity.sport}) on {match.date}
+        </div>
+      ) : null}
+      {item.linkMissing ? <div>Linked activity not found.</div> : null}
       {item.status === "failed" ? (
         <div role="alert">Publishing failed{item.lastError ? `: ${item.lastError}` : ""}</div>
       ) : null}
       <ItemActions id={item.id} name={item.name} date={item.date} status={item.status} />
+      <LinkControls
+        id={item.id}
+        name={item.name}
+        matchSource={item.matchSource}
+        candidates={item.linkCandidates}
+      />
     </li>
   );
 }
@@ -42,7 +72,7 @@ function Scheduled({ item }: { item: ScheduledItem }) {
 function Activity({ item }: { item: ActivityItem }) {
   return (
     <li className="item">
-      <strong>{item.name}</strong> <span className="badge">Completed</span>
+      <strong>{item.name}</strong> <span className="badge">Unplanned activity</span>
       <div>
         {item.sport}, {item.duration}, {item.distance}
       </div>
@@ -62,7 +92,7 @@ export default async function Page({
   const view = parseView(first(params.view));
   const grid = buildGrid(view, parseAnchor(first(params.date), today));
   const deps = scheduleDeps();
-  const data = await loadCalendar(getDb(), deps.readService, grid);
+  const data = await loadCalendar(getDb(), deps.readService, grid, today);
 
   return (
     <main>
@@ -72,7 +102,8 @@ export default async function Page({
       <h1>Calendar</h1>
       <p>
         <strong>Publishes to your real intervals.icu account.</strong> Completed Garmin activities
-        are shown alongside, without matching.
+        are matched to planned runs by day and sport, or linked manually. Matching ignores publish
+        status; linking only changes wristplan&apos;s local data.
       </p>
 
       <section aria-label="Schedule a workout">
@@ -99,7 +130,7 @@ export default async function Page({
           </Link>
         </nav>
         {data.notices.map((n) => (
-          <p key={n} role="alert">
+          <p key={n} role="status">
             {n}
           </p>
         ))}

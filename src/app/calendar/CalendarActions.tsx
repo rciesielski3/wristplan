@@ -2,16 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { scheduleErrorMessage } from "../../modules/calendar/messages";
+import { linkErrorMessage, scheduleErrorMessage } from "../../modules/calendar/messages";
 
 const PUBLISH_NOTICE = "Publishes to your real intervals.icu account.";
 
-function useCall() {
+function useCall(errorMessage = scheduleErrorMessage) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function call(path: string, method: "POST" | "PATCH" | "DELETE", body?: unknown) {
+  async function call(path: string, method: "POST" | "PATCH" | "PUT" | "DELETE", body?: unknown) {
     setBusy(true);
     setMessage(null);
     try {
@@ -27,7 +27,7 @@ function useCall() {
       }
       const payload = (await res.json().catch(() => null)) as { error?: unknown } | null;
       const apiError = typeof payload?.error === "string" ? payload.error : undefined;
-      setMessage(scheduleErrorMessage(res.status, apiError));
+      setMessage(errorMessage(res.status, apiError));
     } catch {
       setMessage("Request failed");
     } finally {
@@ -131,6 +131,71 @@ export function ItemActions({ id, name, date, status }: ItemProps) {
         Remove
       </button>
       <small>Acts on your real intervals.icu account.</small>
+      {message ? <p role="alert">{message}</p> : null}
+    </div>
+  );
+}
+
+interface LinkProps {
+  readonly id: string;
+  readonly name: string;
+  readonly matchSource: "manual" | "none" | null;
+  readonly candidates: readonly { id: string; label: string }[];
+}
+
+export function LinkControls({ id, name, matchSource, candidates }: LinkProps) {
+  const { busy, message, call } = useCall(linkErrorMessage);
+  const [activityId, setActivityId] = useState("");
+  const base = `/api/schedule/${id}/link`;
+
+  return (
+    <div className="actions">
+      <select
+        value={activityId}
+        aria-label={`Activity to link to ${name}`}
+        onChange={(e) => setActivityId(e.target.value)}
+      >
+        <option value="">Choose an activity</option>
+        {candidates.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+      <button
+        type="button"
+        disabled={busy || !candidates.some((c) => c.id === activityId)}
+        aria-label={`Link ${name}`}
+        onClick={() => call(base, "PUT", { garminActivityId: activityId })}
+      >
+        Link
+      </button>
+      {matchSource === "none" ? null : (
+        <button
+          type="button"
+          disabled={busy}
+          aria-label={`No match for ${name}`}
+          onClick={() => call(base, "PUT", { none: true })}
+        >
+          No match
+        </button>
+      )}
+      {matchSource === null ? null : (
+        <button
+          type="button"
+          disabled={busy}
+          aria-label={`Unlink ${name}`}
+          onClick={() => call(base, "DELETE")}
+        >
+          Unlink
+        </button>
+      )}
+      <small>
+        {candidates.length === 0
+          ? "No nearby unplanned activities."
+          : "Showing unplanned activities within 7 days."}
+      </small>
+      <small>Only changes wristplan&apos;s local data; nothing is sent to intervals.icu.</small>
       {message ? <p role="alert">{message}</p> : null}
     </div>
   );
