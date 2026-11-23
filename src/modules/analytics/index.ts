@@ -18,6 +18,12 @@ export {
 } from "./aggregate";
 export { formatDelta, formatOf, formatPercent } from "./format";
 export {
+  DASHBOARD_ACTIVITY_LIMIT,
+  type DashboardData,
+  type DashboardParams,
+  loadDashboard,
+} from "./load";
+export {
   buildPeriods,
   DEFAULT_PERIOD_COUNT,
   DEFAULT_PERIOD_KIND,
