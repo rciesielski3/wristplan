@@ -103,3 +103,10 @@ pre {
 .calendar .actions input {
   max-width: 100%;
 }
+nav [aria-current="page"] {
+  font-weight: bold;
+  text-decoration: none;
+}
+.scroll {
+  overflow-x: auto;
+}

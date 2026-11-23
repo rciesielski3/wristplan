@@ -35,3 +35,15 @@ export {
   parsePeriodKind,
   shiftAnchor,
 } from "./periods";
+export {
+  buildDashboardView,
+  type DashboardQuery,
+  type DashboardView,
+  dashboardHref,
+  ESTIMATE_LABEL,
+  navTargets,
+  parseDashboardQuery,
+  planCells,
+  sportLabel,
+  volumeCell,
+} from "./view";

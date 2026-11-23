@@ -4,8 +4,8 @@ export type CalendarView = "week" | "month";
 
 export const DEFAULT_VIEW: CalendarView = "week";
 // Keeps day arithmetic far from the Date range limit, where toISOString stops being YYYY-MM-DD.
-const MIN_ANCHOR = "1970-01-01";
-const MAX_ANCHOR = "2100-12-31";
+export const MIN_ANCHOR = "1970-01-01";
+export const MAX_ANCHOR = "2100-12-31";
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const MONTHS = [
   "January",

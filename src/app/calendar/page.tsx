@@ -97,7 +97,8 @@ export default async function Page({
   return (
     <main>
       <nav aria-label="Main">
-        <Link href="/">Home</Link> <Link href="/workouts">Workouts</Link>
+        <Link href="/">Home</Link> <Link href="/workouts">Workouts</Link>{" "}
+        <Link href="/dashboard">Dashboard</Link>
       </nav>
       <h1>Calendar</h1>
       <p>

@@ -62,7 +62,7 @@ export default async function Page() {
   return (
     <main>
       <nav aria-label="Main">
-        <Link href="/">Home</Link>
+        <Link href="/">Home</Link> <Link href="/dashboard">Dashboard</Link>
       </nav>
       <h1>Workouts</h1>
       <p>
