@@ -5,6 +5,7 @@ import { buildPeriods } from "./periods";
 import {
   buildDashboardView,
   dashboardHref,
+  ESTIMATE_LABEL,
   navTargets,
   parseDashboardQuery,
   planCells,
@@ -42,7 +43,7 @@ describe("volumeCell", () => {
     expect(volumeCell(stats(2, 3725, 20500))).toBe("2 · 1:02:05 · 20.50 km");
   });
   it("shows n of m for unknown durations and distances", () => {
-    expect(volumeCell(stats(2, 600, 0, 1, 0))).toBe("2 · 10:00 (1 of 2) · 0.00 km (0 of 2)");
+    expect(volumeCell(stats(2, 600, 0, 1, 0))).toBe("2 · 10:00 (1 of 2) · — (0 of 2)");
   });
 });
 
@@ -169,6 +170,28 @@ describe("buildDashboardView", () => {
     expect(v.periodLabels).toHaveLength(4);
     expect(v.trend?.columns).toHaveLength(3);
     expect(v.plans?.rows).toHaveLength(5);
+  });
+
+  it.each([
+    ["week", "week"],
+    ["month", "month"],
+  ] as const)("exposes the %s unit and formed trend captions", (kind, unit) => {
+    const q = { kind, count: 3 };
+    const v = buildDashboardView(data(kind, 3, anchor), q, anchor);
+    expect(v.unit).toBe(unit);
+    expect(v.trend?.metrics).toEqual([
+      {
+        metric: "duration",
+        title: "Duration",
+        caption: `Duration change versus the previous ${unit} per sport. ${ESTIMATE_LABEL}`,
+      },
+      {
+        metric: "distance",
+        title: "Distance",
+        caption: `Distance change versus the previous ${unit} per sport. ${ESTIMATE_LABEL}`,
+      },
+    ]);
+    expect(ESTIMATE_LABEL).toBe("Estimate: calculated from stored activities, not a Garmin metric");
   });
 
   it("shapes sports, total row, labels and unknown-value flag", () => {

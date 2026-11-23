@@ -137,16 +137,16 @@ describe("volumeCell (adversarial)", () => {
     for (let dk = 0; dk <= 3; dk++) {
       for (let sk = 0; sk <= 3; sk++) {
         const cell = volumeCell(stats(3, 120, 3000, dk, sk));
-        const dur = dk < 3 ? `2:00 (${dk} of 3)` : "2:00";
-        const dist = sk < 3 ? `3.00 km (${sk} of 3)` : "3.00 km";
+        const dur = dk < 3 ? `${dk === 0 ? "—" : "2:00"} (${dk} of 3)` : "2:00";
+        const dist = sk < 3 ? `${sk === 0 ? "—" : "3.00 km"} (${sk} of 3)` : "3.00 km";
         expect(cell).toBe(`3 · ${dur} · ${dist}`);
       }
     }
   });
 
   it("handles zero known durations with a known distance and the reverse", () => {
-    expect(volumeCell(stats(2, 0, 5000, 0, 2))).toBe("2 · 0:00 (0 of 2) · 5.00 km");
-    expect(volumeCell(stats(2, 600, 0, 2, 0))).toBe("2 · 10:00 · 0.00 km (0 of 2)");
+    expect(volumeCell(stats(2, 0, 5000, 0, 2))).toBe("2 · — (0 of 2) · 5.00 km");
+    expect(volumeCell(stats(2, 600, 0, 2, 0))).toBe("2 · 10:00 · — (0 of 2)");
   });
 
   it("does not annotate a single fully known activity", () => {
