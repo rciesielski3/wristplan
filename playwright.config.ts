@@ -13,12 +13,23 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "chromium", testIgnore: "calendar.spec.ts", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "chromium",
+      testIgnore: ["calendar.spec.ts", "dashboard.spec.ts"],
+      use: { ...devices["Desktop Chrome"] },
+    },
     // Seeds rows that the home page lists, so it runs only after the other specs finished.
     {
       name: "calendar",
       testMatch: "calendar.spec.ts",
       dependencies: ["chromium"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // Also seeds activities; runs after calendar so the seeded rows never overlap.
+    {
+      name: "dashboard",
+      testMatch: "dashboard.spec.ts",
+      dependencies: ["calendar"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],
