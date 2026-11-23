@@ -44,6 +44,14 @@ export {
 } from "./match";
 export { linkErrorMessage, scheduleErrorMessage } from "./messages";
 export {
+  dayOf,
+  manualLinkIds,
+  type PairableActivity,
+  pairPlans,
+  type ResolvedPlan,
+  resolvePlans,
+} from "./pairing";
+export {
   PublisherAuthError,
   PublisherError,
   PublisherForeignEventError,
@@ -63,6 +71,7 @@ export {
   type ScheduleService,
   type ScheduleServiceOptions,
   type ScheduleStatus,
+  toSchedule,
 } from "./schedule";
 export {
   type ActivityItem,

@@ -3,7 +3,7 @@ import { ACTIVITY_LIST_LIMIT, formatDistance, formatDuration, formatText } from 
 import { createWorkoutRepository, type StoredWorkout, summarizeWorkout } from "../workouts";
 import { ScheduleListOverflowError } from "./errors";
 import type { CalendarGrid } from "./grid";
-import { type MatchScheduled, matchWorkouts } from "./match";
+import { dayOf, manualLinkIds, pairPlans, resolvePlans } from "./pairing";
 import { SCHEDULE_LIST_LIMIT, type ScheduleService, type ScheduleStatus } from "./schedule";
 
 export type MatchState = "matched" | "no-match" | "missed" | "planned";
@@ -111,7 +111,6 @@ export async function loadCalendar(
       return [];
     });
 
-  // Activities are bucketed by UTC day, matching how timestamps are displayed elsewhere.
   const start = new Date(`${grid.from}T00:00:00.000Z`);
   const end = new Date(new Date(`${grid.to}T00:00:00.000Z`).getTime() + DAY_MS);
   const select = {
@@ -133,51 +132,15 @@ export async function loadCalendar(
     activities.pop();
   }
 
-  const resolved = await Promise.all(
-    scheduled.map(async (row) => {
-      const cached = byId.get(row.workoutId);
-      if (cached) return { row, wk: cached };
-      // missing or corrupt: keep a placeholder so the row can still be retried or removed
-      return { row, wk: await repo.get(row.workoutId).catch(() => null) };
-    }),
-  );
+  const resolved = await resolvePlans(repo, byId, scheduled);
 
-  // A manual link may point outside the visible range, so linked activities are fetched by id.
-  const linkIds = scheduled.flatMap((r) =>
-    r.matchSource === "manual" && r.linkedGarminActivityId !== null
-      ? [r.linkedGarminActivityId]
-      : [],
-  );
+  const linkIds = manualLinkIds(scheduled);
   const linked =
     linkIds.length === 0
       ? []
       : await db.activity.findMany({ where: { garminActivityId: { in: linkIds } }, select });
   const known = new Map([...linked, ...activities].map((a) => [a.garminActivityId, a]));
-  const dayOf = (a: { startTime: Date }) => a.startTime.toISOString().slice(0, 10);
-
-  const matchable: MatchScheduled[] = resolved.flatMap(({ row, wk }) =>
-    wk
-      ? [
-          {
-            id: row.id,
-            date: row.date,
-            sport: wk.workout.sport,
-            createdAt: row.createdAt,
-            link: row.matchSource === "manual" ? row.linkedGarminActivityId : null,
-            matchSource: row.matchSource,
-          },
-        ]
-      : [],
-  );
-  const { pairs } = matchWorkouts(
-    matchable,
-    [...known.values()].map((a) => ({
-      id: a.garminActivityId,
-      day: dayOf(a),
-      typeKey: a.sport,
-      startTime: a.startTime,
-    })),
-  );
+  const pairs = pairPlans(resolved, [...known.values()]);
   const pairBySchedule = new Map(pairs.map((p) => [p.scheduledId, p]));
   const paired = new Set(pairs.map((p) => p.activityId));
 
