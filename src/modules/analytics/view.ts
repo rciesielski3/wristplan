@@ -15,6 +15,11 @@ import {
 
 export const ESTIMATE_LABEL = "Estimate: calculated from stored activities, not a Garmin metric";
 
+const TREND_METRICS = [
+  { metric: "duration", title: "Duration" },
+  { metric: "distance", title: "Distance" },
+] as const;
+
 const SPORT_LABELS: Record<string, string> = {
   running: "Running",
   cycling: "Cycling",
@@ -70,9 +75,11 @@ export function volumeCell(s: VolumeStats): string {
   if (s.count === 0) return "0";
   const duration = formatDuration(s.durationSeconds);
   const distance = formatDistance(s.distanceMeters);
-  const d = s.durationKnown < s.count ? `${duration} (${s.durationKnown} of ${s.count})` : duration;
-  const k = s.distanceKnown < s.count ? `${distance} (${s.distanceKnown} of ${s.count})` : distance;
-  return `${s.count} · ${d} · ${k}`;
+  const part = (value: string, known: number) => {
+    if (known >= s.count) return value;
+    return `${known === 0 ? "—" : value} (${known} of ${s.count})`;
+  };
+  return `${s.count} · ${part(duration, s.durationKnown)} · ${part(distance, s.distanceKnown)}`;
 }
 
 export function planCells(p: PlanStats) {
@@ -113,6 +120,7 @@ export function buildDashboardView(data: DashboardData, query: DashboardQuery, a
 
   return {
     range: `${data.periodSet.from} to ${data.periodSet.to}`,
+    unit,
     nav: {
       prev: link(prev),
       next: link(next),
@@ -159,6 +167,11 @@ export function buildDashboardView(data: DashboardData, query: DashboardQuery, a
             columns: periods.slice(1).map((p) => p.label),
             duration: trendRows(trendSeries, "duration"),
             distance: trendRows(trendSeries, "distance"),
+            metrics: TREND_METRICS.map(({ metric, title }) => ({
+              metric,
+              title,
+              caption: `${title} change versus the previous ${unit} per sport. ${ESTIMATE_LABEL}`,
+            })),
           },
     notices: data.notices,
     lastSync: data.lastSync ?? "never",

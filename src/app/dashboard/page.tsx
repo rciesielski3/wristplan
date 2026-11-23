@@ -2,12 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import type { ReactNode } from "react";
 import { getDb } from "../../lib/db";
-import {
-  buildDashboardView,
-  ESTIMATE_LABEL,
-  loadDashboard,
-  parseDashboardQuery,
-} from "../../modules/analytics";
+import { buildDashboardView, loadDashboard, parseDashboardQuery } from "../../modules/analytics";
 import { localDay, parseAnchor } from "../../modules/calendar";
 import { requireAllowedHost } from "../workoutDeps";
 
@@ -17,11 +12,10 @@ const first = (value: Param) => (Array.isArray(value) ? value[0] : value);
 
 function Scroll({ label, children }: { label: string; children: ReactNode }) {
   return (
-    // biome-ignore lint/a11y/useSemanticElements: a div region keeps the focusable scroller out of the section outline
     // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable regions must be focusable for keyboard users
-    <div className="scroll" role="region" aria-label={label} tabIndex={0}>
+    <section className="scroll" aria-label={label} tabIndex={0}>
       {children}
-    </div>
+    </section>
   );
 }
 
@@ -170,17 +164,10 @@ export default async function Page({
           <p>Trend is unavailable because the data for this range is incomplete.</p>
         ) : (
           <>
-            {(["duration", "distance"] as const).map((metric) => (
-              <Scroll
-                key={metric}
-                label={`${metric === "duration" ? "Duration" : "Distance"} trend table`}
-              >
+            {trend.metrics.map(({ metric, title, caption }) => (
+              <Scroll key={metric} label={`${title} trend table`}>
                 <table>
-                  <caption>
-                    {metric === "duration" ? "Duration" : "Distance"} change versus the previous{" "}
-                    {nav.kinds.find((k) => k.current)?.label.toLowerCase()} per sport.{" "}
-                    {ESTIMATE_LABEL}
-                  </caption>
+                  <caption>{caption}</caption>
                   <thead>
                     <tr>
                       <th scope="col">Sport</th>
