@@ -1,6 +1,15 @@
 {
   "name": "wristplan",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Plans workouts on intervals.icu for Garmin watches and reads Garmin activities; self-hosted.",
+  "keywords": [
+    "garmin",
+    "intervals-icu",
+    "nextjs",
+    "running",
+    "training-plan",
+    "self-hosted"
+  ],
   "private": true,
   "type": "module",
   "license": "MIT",
