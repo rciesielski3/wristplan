@@ -271,8 +271,8 @@ describe("buildGrid month boundaries", () => {
   it("round-trips next then prev back to the same month", () => {
     for (const anchor of ["2026-12-31", "2027-01-31", "2024-02-29", "2026-03-31"]) {
       const g = buildGrid("month", anchor);
-      expect(buildGrid("month", g.next).prev).toBe(g.anchor.slice(0, 7) + "-01");
-      expect(buildGrid("month", g.prev).next).toBe(g.anchor.slice(0, 7) + "-01");
+      expect(buildGrid("month", g.next).prev).toBe(`${g.anchor.slice(0, 7)}-01`);
+      expect(buildGrid("month", g.prev).next).toBe(`${g.anchor.slice(0, 7)}-01`);
     }
   });
   it("works at the lower clamp edge", () => {

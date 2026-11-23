@@ -461,21 +461,37 @@ describe("schedule handlers under hostile input", () => {
       }
     });
 
-    it("maps an auth failure to 502 and rate limiting to 429 using only the reason prefix", async () => {
-      const mk = (reason: string) => {
-        const fail = () => Promise.reject(new SchedulePublishError(reason));
-        return stub({ schedule: fail });
-      };
-      const auth = await handleSchedule(
-        call("POST", JSON.stringify({ workoutId, date: DATE })),
-        mk("PublisherAuthError (401)"),
-      );
+    it("maps an auth failure to 502 and rate limiting to 429 using only the typed kind", async () => {
+      const mk = (error: SchedulePublishError) => stub({ schedule: () => Promise.reject(error) });
+      const run = (error: SchedulePublishError) =>
+        handleSchedule(call("POST", JSON.stringify({ workoutId, date: DATE })), mk(error));
+      const auth = await run(new SchedulePublishError("PublisherAuthError (401)", "auth"));
       expect(auth.status).toBe(502);
-      const limited = await handleSchedule(
-        call("POST", JSON.stringify({ workoutId, date: DATE })),
-        mk("PublisherRateLimitError (429)"),
+      expect(await auth.json()).toEqual({ error: "intervals.icu rejected the credentials" });
+      const limited = await run(
+        new SchedulePublishError("PublisherRateLimitError (429)", "rate-limit"),
       );
       expect(limited.status).toBe(429);
+      expect(await limited.json()).toEqual({
+        error: "intervals.icu rate limit reached; retry later",
+      });
+      const other = await run(new SchedulePublishError("PublisherTransientError (503)", "other"));
+      expect(other.status).toBe(502);
+      expect(await other.json()).toEqual({ error: "publishing to intervals.icu failed" });
+    });
+
+    it("ignores a rate-limit looking reason when the kind is other or missing", async () => {
+      const looksLimited = "PublisherRateLimitError (429)";
+      const missing = Object.assign(new SchedulePublishError(looksLimited), { kind: undefined });
+      const bogus = Object.assign(new SchedulePublishError(looksLimited), { kind: "nope" });
+      for (const error of [new SchedulePublishError(looksLimited, "other"), missing, bogus]) {
+        const res = await handleSchedule(
+          call("POST", JSON.stringify({ workoutId, date: DATE })),
+          stub({ schedule: () => Promise.reject(error) }),
+        );
+        expect(res.status).toBe(502);
+        expect(await res.json()).toEqual({ error: "publishing to intervals.icu failed" });
+      }
     });
 
     it("maps ScheduleForeignEventError to a fixed 409", async () => {

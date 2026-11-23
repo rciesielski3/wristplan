@@ -114,7 +114,7 @@ test("week view shows scheduled workouts, statuses and activities", async ({ pag
 
   const failed = page.getByRole("list", { name: "Scheduled on 2026-06-18" });
   await expect(failed.getByText("Failed", { exact: true })).toBeVisible();
-  await expect(failed.getByRole("alert")).toContainText("PublisherAuthError (401)");
+  await expect(failed.getByRole("status")).toContainText("PublisherAuthError (401)");
   await expect(failed.getByRole("button", { name: "Retry Cal tempo" })).toBeVisible();
 
   const done = page.getByRole("list", { name: "Completed on 2026-06-16" });

@@ -41,12 +41,10 @@ const serialize = (s: Schedule) => ({
   matchSource: s.matchSource,
 });
 
-// SchedulePublishError.reason starts with the publisher error class name.
 function publishFailure(err: SchedulePublishError): Response {
-  if (err.reason.startsWith("PublisherRateLimitError"))
+  if (err.kind === "rate-limit")
     return json({ error: "intervals.icu rate limit reached; retry later" }, 429);
-  if (err.reason.startsWith("PublisherAuthError"))
-    return json({ error: "intervals.icu rejected the credentials" }, 502);
+  if (err.kind === "auth") return json({ error: "intervals.icu rejected the credentials" }, 502);
   return json({ error: "publishing to intervals.icu failed" }, 502);
 }
 
