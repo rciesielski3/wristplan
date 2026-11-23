@@ -7,7 +7,7 @@ export const DEFAULT_VIEW: CalendarView = "week";
 const MIN_ANCHOR = "1970-01-01";
 const MAX_ANCHOR = "2100-12-31";
 const DAY_MS = 24 * 60 * 60 * 1000;
-const MONTHS = [
+export const MONTHS = [
   "January",
   "February",
   "March",
@@ -59,7 +59,7 @@ export function weekStart(day: string): string {
   return addDays(day, -((weekday + 6) % 7));
 }
 
-const monthStart = (day: string, offset: number): string => {
+export const monthStart = (day: string, offset: number): string => {
   const [year, month] = [Number(day.slice(0, 4)), Number(day.slice(5, 7))];
   return toIso(Date.UTC(year, month - 1 + offset, 1));
 };
