@@ -84,14 +84,22 @@ describe("buildPeriods against an independent calendar oracle", () => {
 
   it("covers every day of the supported anchor range exactly once per window (contiguity)", () => {
     for (const kind of KINDS) {
-      for (let d = MIN; d <= MAX; d += 13) {
-        const { periods } = buildPeriods(kind, isoFromDays(d), 12);
-        periods.forEach((p, i) => {
-          const prev = periods[i - 1];
-          if (prev) expect(daysFromIso(p.start)).toBe(daysFromIso(prev.end) + 1);
-          expect(daysFromIso(p.start)).toBeLessThanOrEqual(daysFromIso(p.end));
-        });
+      // One cheap check per window; a single assertion per kind names the first bad anchor.
+      let firstBad: string | null = null;
+      for (let d = MIN; d <= MAX && firstBad === null; d += 13) {
+        const anchor = isoFromDays(d);
+        const { periods } = buildPeriods(kind, anchor, 12);
+        let ok = periods.length === 12;
+        let prevEnd = Number.NaN;
+        for (const p of periods) {
+          const start = daysFromIso(p.start);
+          const end = daysFromIso(p.end);
+          if (start > end || (!Number.isNaN(prevEnd) && start !== prevEnd + 1)) ok = false;
+          prevEnd = end;
+        }
+        if (!ok) firstBad = anchor;
       }
+      expect(firstBad, `${kind}: first anchor with a gap, overlap or inverted period`).toBeNull();
     }
   });
 
