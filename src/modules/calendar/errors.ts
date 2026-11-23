@@ -23,9 +23,14 @@ export class ScheduleForeignEventError extends Error {
   }
 }
 
+export type SchedulePublishFailureKind = "rate-limit" | "auth" | "other";
+
 export class SchedulePublishError extends Error {
   override readonly name = "SchedulePublishError";
-  constructor(readonly reason: string) {
+  constructor(
+    readonly reason: string,
+    readonly kind: SchedulePublishFailureKind = "other",
+  ) {
     super(`publisher call failed: ${reason}`);
   }
 }

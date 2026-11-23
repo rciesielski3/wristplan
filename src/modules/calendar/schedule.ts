@@ -14,8 +14,10 @@ import {
   ScheduleListOverflowError,
   ScheduleNotFoundError,
   SchedulePublishError,
+  type SchedulePublishFailureKind,
 } from "./errors";
 import {
+  PublisherAuthError,
   PublisherError,
   PublisherForeignEventError,
   PublisherNotFoundError,
@@ -60,6 +62,12 @@ const redact = (err: unknown): string => {
     return err.status === undefined ? err.name : `${err.name} (${err.status})`;
   }
   return err instanceof Error ? err.name : "UnknownError";
+};
+
+const publishFailureKind = (err: unknown): SchedulePublishFailureKind => {
+  if (err instanceof PublisherRateLimitError) return "rate-limit";
+  if (err instanceof PublisherAuthError) return "auth";
+  return "other";
 };
 
 const isRetryable = (err: unknown): boolean =>
@@ -152,7 +160,7 @@ export function createScheduleService(options: ScheduleServiceOptions) {
       if (missingOk && err instanceof PublisherNotFoundError) return;
       await record(row.id, err);
       if (err instanceof PublisherForeignEventError) throw new ScheduleForeignEventError();
-      throw new SchedulePublishError(redact(err));
+      throw new SchedulePublishError(redact(err), publishFailureKind(err));
     }
   }
 

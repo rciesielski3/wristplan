@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { linkErrorMessage, scheduleErrorMessage } from "../../modules/calendar/messages";
 
+// Covers a normal request and its server-side retries, not a full outage (up to ~3 min): the server
+// keeps going and publishing is idempotent, so after "Request failed" the action is safe to repeat.
+const REQUEST_TIMEOUT_MS = 60_000;
 const PUBLISH_NOTICE = "Publishes to your real intervals.icu account.";
 
 function useCall(errorMessage = scheduleErrorMessage) {
@@ -14,9 +17,12 @@ function useCall(errorMessage = scheduleErrorMessage) {
   async function call(path: string, method: "POST" | "PATCH" | "PUT" | "DELETE", body?: unknown) {
     setBusy(true);
     setMessage(null);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
       const res = await fetch(path, {
         method,
+        signal: controller.signal,
         ...(body === undefined
           ? {}
           : { headers: { "content-type": "application/json" }, body: JSON.stringify(body) }),
@@ -31,6 +37,7 @@ function useCall(errorMessage = scheduleErrorMessage) {
     } catch {
       setMessage("Request failed");
     } finally {
+      clearTimeout(timer);
       setBusy(false);
     }
   }

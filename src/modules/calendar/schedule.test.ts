@@ -580,6 +580,38 @@ describe("ownership and error hygiene", () => {
     expect(publisher.calls.map((c) => c.method)).toEqual(["publish", "reschedule", "remove"]);
   });
 
+  it.each([
+    [new PublisherRateLimitError(), "rate-limit"],
+    [new PublisherAuthError(401), "auth"],
+    [new PublisherTransientError(503), "other"],
+    [new PublisherRejectedError(422), "other"],
+    [new TypeError("boom"), "other"],
+    ["oops" as unknown as Error, "other"],
+  ])("sets the publish failure kind from the error class (%#)", async (error, kind) => {
+    const row = await service.schedule(workoutId, DATE);
+    publisher.failNext("remove", error, 99);
+    await expect(service.unschedule(row.id)).rejects.toMatchObject({
+      name: "SchedulePublishError",
+      kind,
+    });
+  });
+
+  it("does not map a foreign event to a publish error and marks unknown remote state as other", async () => {
+    const row = await service.schedule(workoutId, DATE);
+    publisher.failNext("remove", new PublisherForeignEventError());
+    const foreign = await service.unschedule(row.id).catch((e: unknown) => e);
+    expect(foreign).toBeInstanceOf(ScheduleForeignEventError);
+    expect(foreign).not.toHaveProperty("kind");
+    const pending = await t.db.scheduledWorkout.create({
+      data: { workoutId, date: "2026-06-21", externalId: "wristplan-x", status: "failed" },
+    });
+    publisher.failNext("publish", new PublisherRateLimitError(), 99);
+    await expect(service.unschedule(pending.id)).rejects.toMatchObject({
+      reason: "remote state unknown",
+      kind: "other",
+    });
+  });
+
   it("retries a rate limit on remove with 1s then 2s backoff, then gives up", async () => {
     const row = await service.schedule(workoutId, DATE);
     publisher.failNext("remove", new PublisherRateLimitError(), 99);

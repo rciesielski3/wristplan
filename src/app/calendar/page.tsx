@@ -56,7 +56,7 @@ function Scheduled({ item }: { item: ScheduledItem }) {
       ) : null}
       {item.linkMissing ? <div>Linked activity not found.</div> : null}
       {item.status === "failed" ? (
-        <div role="alert">Publishing failed{item.lastError ? `: ${item.lastError}` : ""}</div>
+        <div role="status">Publishing failed{item.lastError ? `: ${item.lastError}` : ""}</div>
       ) : null}
       <ItemActions id={item.id} name={item.name} date={item.date} status={item.status} />
       <LinkControls
