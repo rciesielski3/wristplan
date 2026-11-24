@@ -1,12 +1,12 @@
 # wristplan
 
-TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and intervals.icu. Code lives in `src/modules/` (activities, garmin, intervals, workouts, calendar, analytics), `src/lib/` (db, env, http), `src/app/` (Next.js UI and routes), `prisma/` and `e2e/`.
+TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and intervals.icu. Code lives in `src/modules/` (activities, garmin, intervals, workouts, calendar, analytics, setup), `src/lib/` (db, env, http), `src/app/` (Next.js UI and routes), `prisma/` and `e2e/`.
 
 ## Commands
 
 - `pnpm verify` — full gate: `biome check .`, `pnpm typecheck` (`next typegen && tsc --noEmit`), vitest with coverage. Must pass before every commit.
 - `pnpm test` / `pnpm test:coverage` — vitest (`src/**/*.test.ts`, `test/**/*.test.ts`).
-- `pnpm e2e` — Playwright: smoke, workouts, calendar, dashboard and shell specs; the `calendar` project runs after `chromium`, `dashboard` after `calendar` and `shell` after `dashboard` (they seed rows). Builds and serves on its own port (3100) with a throwaway `e2e.db`. Never click Sync, Schedule, Retry, Reschedule or Remove (they hit real Garmin/intervals.icu); Link, No match and Unlink only write `e2e.db`.
+- `pnpm e2e` — Playwright: smoke, workouts, calendar, dashboard, shell and home specs; the `calendar` project runs after `chromium`, `dashboard` after `calendar`, `shell` after `dashboard` and `home` after `shell` (they seed rows). The e2e server blanks `GARMIN_PERSONAL_API_KEY` and `INTERVALS_API_KEY`. Builds and serves on its own port (3100) with a throwaway `e2e.db`. Never click Sync, Schedule, Retry, Reschedule or Remove (they hit real Garmin/intervals.icu); Link, No match and Unlink only write `e2e.db`.
 - `pnpm db:migrate` — `prisma migrate deploy` using `DATABASE_URL` from `.env`.
 - `pnpm dev` / `pnpm build` / `pnpm start` — Next.js; dev and start bind to 127.0.0.1.
 - `pnpm format` — biome format --write. `pnpm lint` — biome lint.
@@ -17,11 +17,12 @@ TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and interval
 - `src/modules/**` — one folder per module. Coverage threshold: 90% lines and branches.
 - `src/modules/intervals` — intervals.icu HTTP client (client, config, errors); `fetch` is injectable for tests. I/O clients live under `modules/<integration>` while there are few integrations; extract adapters to `src/integrations/` once more exist.
 - `src/modules/garmin`, `activities`, `workouts`, `calendar` — Garmin client, activity sync/storage, workout model/builder/repository, scheduling with the intervals publisher.
+- `src/modules/setup` — setup status (booleans/counts only, never key values), first-run checklist and sidebar view models; `loadSetupCounts` never throws and reports an unmigrated or unreachable database as not ready. The sidebar Setup block (`src/app/layout.tsx`) and the Home Today card, week strip and KPI tiles reuse `loadCalendar` (`homeGrid`, `buildTodayCard`, `buildWeekStrip` in `modules/calendar/today`) and `loadDashboard` (`buildKpiTiles`).
 - `src/modules/analytics` — pure period/volume/plan/trend aggregation, format helpers and the dashboard view model; `loadDashboard` is the only DB reader.
 - `src/lib/**` — shared code: `db`, `env` (zod, `parseEnv`, `getEnv`), `http`. Same 90% threshold.
 - `src/app/**` — Next.js pages (home, `workouts`, `calendar`, `dashboard`) and thin route wrappers (`api/sync`, `api/activities/[id]/fit`, `api/workouts`, `api/schedule` incl. `[id]/retry` and `[id]/link`); excluded from coverage.
 - `prisma/` — schema and migrations.
-- `e2e/` — Playwright specs (`smoke`, `workouts`, `calendar`, `dashboard`, `shell`).
+- `e2e/` — Playwright specs (`smoke`, `workouts`, `calendar`, `dashboard`, `shell`, `home`).
 - `test/` — shared helpers, fakes (intervals server, publisher) and the publisher contract suite.
 - Commit scopes mirror modules: activities, workouts, calendar, analytics, intervals, garmin, lib, repo, ci, deps.
 

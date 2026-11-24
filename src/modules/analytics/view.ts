@@ -179,3 +179,20 @@ export function buildDashboardView(data: DashboardData, query: DashboardQuery, a
 }
 
 export type DashboardView = ReturnType<typeof buildDashboardView>;
+
+export interface KpiTile {
+  readonly label: string;
+  readonly value: string;
+}
+
+// Same totals and wording as the dashboard volume table, over the loaded period set.
+export function buildKpiTiles(data: DashboardData): KpiTile[] {
+  const o = data.volume.overall;
+  const known = (value: string, n: number) =>
+    n >= o.count ? value : `${n === 0 ? "—" : value} (${n} of ${o.count})`;
+  return [
+    { label: "Activities", value: String(o.count) },
+    { label: "Duration", value: known(formatDuration(o.durationSeconds), o.durationKnown) },
+    { label: "Distance", value: known(formatDistance(o.distanceMeters), o.distanceKnown) },
+  ];
+}

@@ -12,6 +12,25 @@ test("home page renders the sync button and empty activity list", async ({ page 
   await expect(page.getByText("No activities yet.")).toBeVisible();
 });
 
+test("home page on an empty database shows the setup checklist and sidebar status", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const card = page.getByRole("region", { name: "Get started" });
+  await expect(card.getByText(/\d of 6/)).toBeVisible();
+  const garmin = card.getByRole("listitem").filter({ hasText: "Garmin key added" });
+  await expect(garmin).toContainText("To do");
+  await expect(garmin).toContainText(".env");
+  await expect(page.getByRole("heading", { name: "Today" })).toHaveCount(0);
+  const setup = page.getByRole("region", { name: "Setup" });
+  await expect(setup).toContainText("Garmin key: Missing");
+  await expect(setup).toContainText("Latest sync: never");
+  await expect(setup.getByRole("link", { name: "Finish setup on Home" })).toHaveAttribute(
+    "href",
+    "/",
+  );
+});
+
 test("sidebar nav has four links and marks the current one", async ({ page }) => {
   await page.goto("/workouts");
   const nav = page.getByRole("navigation", { name: "Main" });
