@@ -6,7 +6,7 @@ TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and interval
 
 - `pnpm verify` — full gate: `biome check .`, `pnpm typecheck` (`next typegen && tsc --noEmit`), vitest with coverage. Must pass before every commit.
 - `pnpm test` / `pnpm test:coverage` — vitest (`src/**/*.test.ts`, `test/**/*.test.ts`).
-- `pnpm e2e` — Playwright: smoke, workouts, calendar and dashboard specs; the `calendar` project runs after `chromium` and the `dashboard` project after `calendar` (they seed rows). Builds and serves on its own port (3100) with a throwaway `e2e.db`. Never click Sync, Schedule, Retry, Reschedule or Remove (they hit real Garmin/intervals.icu); Link, No match and Unlink only write `e2e.db`.
+- `pnpm e2e` — Playwright: smoke, workouts, calendar, dashboard and shell specs; the `calendar` project runs after `chromium`, `dashboard` after `calendar` and `shell` after `dashboard` (they seed rows). Builds and serves on its own port (3100) with a throwaway `e2e.db`. Never click Sync, Schedule, Retry, Reschedule or Remove (they hit real Garmin/intervals.icu); Link, No match and Unlink only write `e2e.db`.
 - `pnpm db:migrate` — `prisma migrate deploy` using `DATABASE_URL` from `.env`.
 - `pnpm dev` / `pnpm build` / `pnpm start` — Next.js; dev and start bind to 127.0.0.1.
 - `pnpm format` — biome format --write. `pnpm lint` — biome lint.
@@ -21,7 +21,7 @@ TypeScript (ESM, Node >=22.13, pnpm) Next.js app integrating Garmin and interval
 - `src/lib/**` — shared code: `db`, `env` (zod, `parseEnv`, `getEnv`), `http`. Same 90% threshold.
 - `src/app/**` — Next.js pages (home, `workouts`, `calendar`, `dashboard`) and thin route wrappers (`api/sync`, `api/activities/[id]/fit`, `api/workouts`, `api/schedule` incl. `[id]/retry` and `[id]/link`); excluded from coverage.
 - `prisma/` — schema and migrations.
-- `e2e/` — Playwright specs (`smoke`, `workouts`, `calendar`, `dashboard`).
+- `e2e/` — Playwright specs (`smoke`, `workouts`, `calendar`, `dashboard`, `shell`).
 - `test/` — shared helpers, fakes (intervals server, publisher) and the publisher contract suite.
 - Commit scopes mirror modules: activities, workouts, calendar, analytics, intervals, garmin, lib, repo, ci, deps.
 

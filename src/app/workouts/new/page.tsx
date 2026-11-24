@@ -7,9 +7,9 @@ export default async function Page() {
   await connection();
   await requireAllowedHost();
   return (
-    <main>
+    <div>
       <h1>New workout</h1>
       <WorkoutBuilder initial={emptyForm()} />
-    </main>
+    </div>
   );
 }

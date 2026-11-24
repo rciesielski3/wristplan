@@ -14,7 +14,7 @@ import { WorkoutBuilder } from "../../WorkoutBuilder";
 
 function CannotEdit({ id, name, corrupt }: { id: string; name: string; corrupt: boolean }) {
   return (
-    <main>
+    <div>
       <h1>Edit workout</h1>
       <p role="alert">This workout cannot be edited in the builder.</p>
       <p>
@@ -27,7 +27,7 @@ function CannotEdit({ id, name, corrupt }: { id: string; name: string; corrupt: 
         corrupt={corrupt}
         redirectTo="/workouts"
       />
-    </main>
+    </div>
   );
 }
 
@@ -40,10 +40,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
     const form = editableForm(stored.workout);
     if (!form) return <CannotEdit id={stored.id} name={stored.workout.name} corrupt={false} />;
     return (
-      <main>
+      <div>
         <h1>Edit workout</h1>
         <WorkoutBuilder id={stored.id} initial={form} />
-      </main>
+      </div>
     );
   } catch (err) {
     if (err instanceof WorkoutCorruptError)

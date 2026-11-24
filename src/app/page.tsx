@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { connection } from "next/server";
 import { getDb } from "../lib/db";
 import {
@@ -19,11 +18,7 @@ export default async function Page() {
   const [activities, run] = await Promise.all([listActivities(db), latestSyncRun(db)]);
 
   return (
-    <main>
-      <nav aria-label="Main">
-        <Link href="/workouts">Workouts</Link> <Link href="/calendar">Calendar</Link>{" "}
-        <Link href="/dashboard">Dashboard</Link>
-      </nav>
+    <div>
       <h1>wristplan</h1>
       <p>Plan workouts and sync them to your watch.</p>
 
@@ -43,42 +38,44 @@ export default async function Page() {
         {activities.length === 0 ? (
           <p>No activities yet.</p>
         ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Sport</th>
-                <th>Start</th>
-                <th>Duration</th>
-                <th>Distance</th>
-                <th>Status</th>
-                <th>Last synced</th>
-                <th>FIT</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activities.map((a) => (
-                <tr key={a.garminActivityId}>
-                  <td>{formatText(a.name)}</td>
-                  <td>{formatText(a.sport)}</td>
-                  <td>{formatTimestamp(a.startTime)}</td>
-                  <td>{formatDuration(a.durationSeconds)}</td>
-                  <td>{formatDistance(a.distanceMeters)}</td>
-                  <td>{a.syncStatus}</td>
-                  <td>{formatTimestamp(a.lastSyncedAt)}</td>
-                  <td>
-                    {a.fitDownloadedAt ? (
-                      <a href={`/api/activities/${a.garminActivityId}/fit`}>Download</a>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
+          <div className="scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Sport</th>
+                  <th>Start</th>
+                  <th>Duration</th>
+                  <th>Distance</th>
+                  <th>Status</th>
+                  <th>Last synced</th>
+                  <th>FIT</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {activities.map((a) => (
+                  <tr key={a.garminActivityId}>
+                    <td>{formatText(a.name)}</td>
+                    <td>{formatText(a.sport)}</td>
+                    <td>{formatTimestamp(a.startTime)}</td>
+                    <td>{formatDuration(a.durationSeconds)}</td>
+                    <td>{formatDistance(a.distanceMeters)}</td>
+                    <td>{a.syncStatus}</td>
+                    <td>{formatTimestamp(a.lastSyncedAt)}</td>
+                    <td>
+                      {a.fitDownloadedAt ? (
+                        <a href={`/api/activities/${a.garminActivityId}/fit`}>Download</a>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

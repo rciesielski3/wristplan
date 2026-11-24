@@ -35,11 +35,7 @@ export default async function Page({
   const { nav, trend } = view;
 
   return (
-    <main>
-      <nav aria-label="Main">
-        <Link href="/">Home</Link> <Link href="/workouts">Workouts</Link>{" "}
-        <Link href="/calendar">Calendar</Link>
-      </nav>
+    <div>
       <h1>Dashboard</h1>
       <p>
         Read-only statistics from stored activities and scheduled workouts. Nothing is sent
@@ -209,6 +205,6 @@ export default async function Page({
           day.
         </p>
       </section>
-    </main>
+    </div>
   );
 }

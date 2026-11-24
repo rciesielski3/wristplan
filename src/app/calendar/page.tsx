@@ -95,11 +95,7 @@ export default async function Page({
   const data = await loadCalendar(getDb(), deps.readService, grid, today);
 
   return (
-    <main>
-      <nav aria-label="Main">
-        <Link href="/">Home</Link> <Link href="/workouts">Workouts</Link>{" "}
-        <Link href="/dashboard">Dashboard</Link>
-      </nav>
+    <div>
       <h1>Calendar</h1>
       <p>
         <strong>Publishes to your real intervals.icu account.</strong> Completed Garmin activities
@@ -135,54 +131,56 @@ export default async function Page({
             {n}
           </p>
         ))}
-        <table className="calendar">
-          <caption>
-            {view === "week" ? "Week" : "Month"} of {grid.label}
-          </caption>
-          <thead>
-            <tr>
-              {WEEKDAYS.map((d) => (
-                <th key={d} scope="col">
-                  {d}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {grid.weeks.map((week) => (
-              <tr key={week[0]}>
-                {week.map((day) => {
-                  const { scheduled, activities } = data.days[day] ?? NO_DAY;
-                  const outside = grid.month !== null && !day.startsWith(grid.month);
-                  return (
-                    <td
-                      key={day}
-                      className={`${outside ? "outside" : ""} ${day === today ? "today" : ""}`}
-                    >
-                      <time dateTime={day}>{day}</time>
-                      {day === today ? <span> (today)</span> : null}
-                      {scheduled.length > 0 ? (
-                        <ul aria-label={`Scheduled on ${day}`}>
-                          {scheduled.map((s) => (
-                            <Scheduled key={s.id} item={s} />
-                          ))}
-                        </ul>
-                      ) : null}
-                      {activities.length > 0 ? (
-                        <ul aria-label={`Completed on ${day}`}>
-                          {activities.map((a) => (
-                            <Activity key={a.id} item={a} />
-                          ))}
-                        </ul>
-                      ) : null}
-                    </td>
-                  );
-                })}
+        <div className="scroll">
+          <table className="calendar">
+            <caption>
+              {view === "week" ? "Week" : "Month"} of {grid.label}
+            </caption>
+            <thead>
+              <tr>
+                {WEEKDAYS.map((d) => (
+                  <th key={d} scope="col">
+                    {d}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {grid.weeks.map((week) => (
+                <tr key={week[0]}>
+                  {week.map((day) => {
+                    const { scheduled, activities } = data.days[day] ?? NO_DAY;
+                    const outside = grid.month !== null && !day.startsWith(grid.month);
+                    return (
+                      <td
+                        key={day}
+                        className={`${outside ? "outside" : ""} ${day === today ? "today" : ""}`}
+                      >
+                        <time dateTime={day}>{day}</time>
+                        {day === today ? <span> (today)</span> : null}
+                        {scheduled.length > 0 ? (
+                          <ul aria-label={`Scheduled on ${day}`}>
+                            {scheduled.map((s) => (
+                              <Scheduled key={s.id} item={s} />
+                            ))}
+                          </ul>
+                        ) : null}
+                        {activities.length > 0 ? (
+                          <ul aria-label={`Completed on ${day}`}>
+                            {activities.map((a) => (
+                              <Activity key={a.id} item={a} />
+                            ))}
+                          </ul>
+                        ) : null}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </section>
-    </main>
+    </div>
   );
 }
