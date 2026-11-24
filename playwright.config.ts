@@ -15,7 +15,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: ["calendar.spec.ts", "dashboard.spec.ts", "shell.spec.ts"],
+      testIgnore: ["calendar.spec.ts", "dashboard.spec.ts", "shell.spec.ts", "home.spec.ts"],
       use: { ...devices["Desktop Chrome"] },
     },
     // Seeds rows that the home page lists, so it runs only after the other specs finished.
@@ -39,10 +39,18 @@ export default defineConfig({
       dependencies: ["dashboard"],
       use: { ...devices["Desktop Chrome"] },
     },
+    // Seeds rows around the real current day; runs last so no other spec counts rows meanwhile.
+    {
+      name: "home",
+      testMatch: "home.spec.ts",
+      dependencies: ["shell"],
+      use: { ...devices["Desktop Chrome"] },
+    },
   ],
   webServer: {
     command: `rm -f e2e.db && pnpm exec prisma migrate deploy && pnpm build && pnpm start -p ${port}`,
-    env: { DATABASE_URL: "file:./e2e.db" },
+    // Blank keys beat any .env file, so e2e never holds real credentials and key steps stay "to do".
+    env: { DATABASE_URL: "file:./e2e.db", GARMIN_PERSONAL_API_KEY: "", INTERVALS_API_KEY: "" },
     url: origin,
     reuseExistingServer: false,
     timeout: 180_000,

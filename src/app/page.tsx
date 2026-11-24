@@ -1,5 +1,6 @@
 import { connection } from "next/server";
 import { getDb } from "../lib/db";
+import { getEnv } from "../lib/env";
 import {
   formatDistance,
   formatDuration,
@@ -8,19 +9,60 @@ import {
   latestSyncRun,
   listActivities,
 } from "../modules/activities";
+import { buildKpiTiles, loadDashboard } from "../modules/analytics";
+import {
+  buildTodayCard,
+  buildWeekStrip,
+  homeGrid,
+  loadCalendar,
+  localDay,
+} from "../modules/calendar";
+import { buildChecklist, getSetupStatus, loadSetupCounts } from "../modules/setup";
+import { Checklist, Kpis, Today, WeekStrip } from "./HomeCards";
 import { SyncButton } from "./SyncButton";
+import { scheduleDeps } from "./scheduleDeps";
 import { requireAllowedHost } from "./workoutDeps";
 
 export default async function Page() {
   await connection();
   await requireAllowedHost();
   const db = getDb();
+  const status = getSetupStatus(getEnv(), await loadSetupCounts(db));
+  const checklist = buildChecklist(status);
+
+  if (!status.databaseReady) {
+    return (
+      <div>
+        <h1>wristplan</h1>
+        <p>Plan workouts and sync them to your watch.</p>
+        <Checklist view={checklist} />
+      </div>
+    );
+  }
+
+  const today = localDay(new Date());
   const [activities, run] = await Promise.all([listActivities(db), latestSyncRun(db)]);
+  const overview =
+    checklist.complete || status.activityCount > 0
+      ? await Promise.all([
+          loadCalendar(db, scheduleDeps().readService, homeGrid(today), today),
+          loadDashboard(db, { kind: "week", count: 8, anchor: today }, today),
+        ])
+      : null;
 
   return (
     <div>
       <h1>wristplan</h1>
       <p>Plan workouts and sync them to your watch.</p>
+
+      {checklist.complete ? null : <Checklist view={checklist} />}
+      {overview ? (
+        <>
+          <Today card={buildTodayCard(overview[0], today)} />
+          <WeekStrip days={buildWeekStrip(overview[0], today)} />
+          <Kpis tiles={buildKpiTiles(overview[1])} notices={overview[1].notices} />
+        </>
+      ) : null}
 
       <section>
         <h2>Sync</h2>

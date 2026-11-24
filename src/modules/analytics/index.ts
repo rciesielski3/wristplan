@@ -37,10 +37,12 @@ export {
 } from "./periods";
 export {
   buildDashboardView,
+  buildKpiTiles,
   type DashboardQuery,
   type DashboardView,
   dashboardHref,
   ESTIMATE_LABEL,
+  type KpiTile,
   navTargets,
   parseDashboardQuery,
   planCells,

@@ -4,6 +4,7 @@ import type { DashboardData } from "./load";
 import { buildPeriods } from "./periods";
 import {
   buildDashboardView,
+  buildKpiTiles,
   dashboardHref,
   ESTIMATE_LABEL,
   navTargets,
@@ -254,5 +255,33 @@ describe("buildDashboardView", () => {
     );
     expect(v.nav.prev).toBeNull();
     expect(v.nav.next).not.toBeNull();
+  });
+});
+
+describe("buildKpiTiles", () => {
+  const stats = (count: number, durationKnown: number, distanceKnown: number) => ({
+    count,
+    durationSeconds: 5400,
+    distanceMeters: 12500,
+    durationKnown,
+    distanceKnown,
+  });
+  const tiles = (overall: ReturnType<typeof stats>) =>
+    buildKpiTiles({ volume: { overall } } as unknown as DashboardData);
+
+  it("formats totals with the shared helpers", () => {
+    expect(tiles(stats(2, 2, 2))).toEqual([
+      { label: "Activities", value: "2" },
+      { label: "Duration", value: "1:30:00" },
+      { label: "Distance", value: "12.50 km" },
+    ]);
+  });
+
+  it("notes partially known values", () => {
+    expect(tiles(stats(3, 2, 0)).map((t) => t.value)).toEqual([
+      "3",
+      "1:30:00 (2 of 3)",
+      "— (0 of 3)",
+    ]);
   });
 });

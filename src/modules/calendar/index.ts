@@ -74,6 +74,17 @@ export {
   toSchedule,
 } from "./schedule";
 export {
+  buildTodayCard,
+  buildWeekStrip,
+  CHIP_LABEL,
+  type Chip,
+  homeGrid,
+  itemChip,
+  type StripDay,
+  type TodayCard,
+  type TodayItem,
+} from "./today";
+export {
   type ActivityItem,
   CANDIDATE_LIMIT,
   CANDIDATE_WINDOW_DAYS,
