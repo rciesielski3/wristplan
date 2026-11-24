@@ -15,7 +15,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      testIgnore: ["calendar.spec.ts", "dashboard.spec.ts"],
+      testIgnore: ["calendar.spec.ts", "dashboard.spec.ts", "shell.spec.ts"],
       use: { ...devices["Desktop Chrome"] },
     },
     // Seeds rows that the home page lists, so it runs only after the other specs finished.
@@ -30,6 +30,13 @@ export default defineConfig({
       name: "dashboard",
       testMatch: "dashboard.spec.ts",
       dependencies: ["calendar"],
+      use: { ...devices["Desktop Chrome"] },
+    },
+    // Seeds workouts to render the widest tables; runs last so no spec counts rows concurrently.
+    {
+      name: "shell",
+      testMatch: "shell.spec.ts",
+      dependencies: ["dashboard"],
       use: { ...devices["Desktop Chrome"] },
     },
   ],

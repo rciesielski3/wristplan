@@ -79,19 +79,19 @@ After pulling a change that adds a Prisma migration, back up the SQLite file, th
 
 ## Commands
 
-| Command              | Purpose                                                                                                                                                                     |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm dev`           | Next.js dev server on 127.0.0.1:3000                                                                                                                                        |
-| `pnpm build`         | Production build                                                                                                                                                            |
-| `pnpm start`         | Serve the production build on 127.0.0.1                                                                                                                                     |
-| `pnpm lint`          | biome lint                                                                                                                                                                  |
-| `pnpm typecheck`     | `next typegen` and `tsc --noEmit` (needs `DATABASE_URL`)                                                                                                                    |
-| `pnpm test`          | Unit tests (vitest)                                                                                                                                                         |
-| `pnpm test:coverage` | Unit tests with coverage                                                                                                                                                    |
-| `pnpm verify`        | Full gate: biome, typecheck, unit tests with coverage (needs `DATABASE_URL`)                                                                                                |
-| `pnpm e2e`           | Playwright specs (smoke, workouts, calendar, dashboard) on a throwaway `e2e.db`; never clicks Sync or publishing buttons (run `pnpm exec playwright install chromium` once) |
-| `pnpm format`        | biome format --write                                                                                                                                                        |
-| `pnpm db:migrate`    | `prisma migrate deploy` using `DATABASE_URL` from `.env`                                                                                                                    |
+| Command              | Purpose                                                                                                                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`           | Next.js dev server on 127.0.0.1:3000                                                                                                                                               |
+| `pnpm build`         | Production build                                                                                                                                                                   |
+| `pnpm start`         | Serve the production build on 127.0.0.1                                                                                                                                            |
+| `pnpm lint`          | biome lint                                                                                                                                                                         |
+| `pnpm typecheck`     | `next typegen` and `tsc --noEmit` (needs `DATABASE_URL`)                                                                                                                           |
+| `pnpm test`          | Unit tests (vitest)                                                                                                                                                                |
+| `pnpm test:coverage` | Unit tests with coverage                                                                                                                                                           |
+| `pnpm verify`        | Full gate: biome, typecheck, unit tests with coverage (needs `DATABASE_URL`)                                                                                                       |
+| `pnpm e2e`           | Playwright specs (smoke, workouts, calendar, dashboard, shell) on a throwaway `e2e.db`; never clicks Sync or publishing buttons (run `pnpm exec playwright install chromium` once) |
+| `pnpm format`        | biome format --write                                                                                                                                                               |
+| `pnpm db:migrate`    | `prisma migrate deploy` using `DATABASE_URL` from `.env`                                                                                                                           |
 
 ## Environment variables
 

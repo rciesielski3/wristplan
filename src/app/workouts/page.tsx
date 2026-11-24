@@ -19,37 +19,39 @@ function WorkoutTable({ title, items }: { title: string; items: readonly StoredW
       {items.length === 0 ? (
         <p>None yet.</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Sport</th>
-              <th>Steps</th>
-              <th>Duration</th>
-              <th>Target</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((s) => {
-              const sum = summarizeWorkout(s.workout);
-              return (
-                <tr key={s.id}>
-                  <td>
-                    <Link href={`/workouts/${s.id}/edit`}>{formatText(s.workout.name)}</Link>
-                  </td>
-                  <td>{s.workout.sport}</td>
-                  <td>{sum.stepCount}</td>
-                  <td>{sum.totalSeconds === null ? "—" : formatDuration(sum.totalSeconds)}</td>
-                  <td>{TARGET_LABEL[sum.targetType]}</td>
-                  <td>
-                    <WorkoutActions id={s.id} name={s.workout.name} isTemplate={s.isTemplate} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+        <div className="scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Sport</th>
+                <th>Steps</th>
+                <th>Duration</th>
+                <th>Target</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((s) => {
+                const sum = summarizeWorkout(s.workout);
+                return (
+                  <tr key={s.id}>
+                    <td>
+                      <Link href={`/workouts/${s.id}/edit`}>{formatText(s.workout.name)}</Link>
+                    </td>
+                    <td>{s.workout.sport}</td>
+                    <td>{sum.stepCount}</td>
+                    <td>{sum.totalSeconds === null ? "—" : formatDuration(sum.totalSeconds)}</td>
+                    <td>{TARGET_LABEL[sum.targetType]}</td>
+                    <td>
+                      <WorkoutActions id={s.id} name={s.workout.name} isTemplate={s.isTemplate} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );
@@ -60,10 +62,7 @@ export default async function Page() {
   await requireAllowedHost();
   const { items, corruptIds } = await createWorkoutRepository(getDb()).list();
   return (
-    <main>
-      <nav aria-label="Main">
-        <Link href="/">Home</Link> <Link href="/dashboard">Dashboard</Link>
-      </nav>
+    <div>
       <h1>Workouts</h1>
       <p>
         <Link href="/workouts/new">New workout</Link>
@@ -73,6 +72,6 @@ export default async function Page() {
       ) : null}
       <WorkoutTable title="Workouts" items={items.filter((i) => !i.isTemplate)} />
       <WorkoutTable title="Templates" items={items.filter((i) => i.isTemplate)} />
-    </main>
+    </div>
   );
 }
