@@ -16,6 +16,7 @@ import {
 } from "../../modules/calendar";
 import { scheduleDeps } from "../scheduleDeps";
 import { requireAllowedHost } from "../workoutDeps";
+import { ActionsDrawer } from "./ActionsDrawer";
 import { ItemActions, LinkControls, ScheduleForm } from "./CalendarActions";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -58,13 +59,21 @@ function Scheduled({ item }: { item: ScheduledItem }) {
       {item.status === "failed" ? (
         <div role="status">Publishing failed{item.lastError ? `: ${item.lastError}` : ""}</div>
       ) : null}
-      <ItemActions id={item.id} name={item.name} date={item.date} status={item.status} />
-      <LinkControls
-        id={item.id}
-        name={item.name}
-        matchSource={item.matchSource}
-        candidates={item.linkCandidates}
-      />
+      <ActionsDrawer name={item.name} date={item.date}>
+        <section aria-label="Intervals.icu (real account)">
+          <h3>Intervals.icu (real account)</h3>
+          <ItemActions id={item.id} name={item.name} date={item.date} status={item.status} />
+        </section>
+        <section aria-label="Local match (this app only)">
+          <h3>Local match (this app only)</h3>
+          <LinkControls
+            id={item.id}
+            name={item.name}
+            matchSource={item.matchSource}
+            candidates={item.linkCandidates}
+          />
+        </section>
+      </ActionsDrawer>
     </li>
   );
 }

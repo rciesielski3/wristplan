@@ -65,9 +65,9 @@ API (same-origin, Host-guarded; mutations also reject cross-origin requests): `G
 
 ## Calendar
 
-`/calendar` (`?view=week|month&date=YYYY-MM-DD`) shows scheduled workouts and synced activities. Schedule a workout on a date, then Retry, Reschedule or Remove it. Schedule, Retry, Reschedule and Remove publish to intervals.icu and act on your **real** account; they need `INTERVALS_API_KEY` (and `INTERVALS_ATHLETE_ID`), otherwise they fail as not configured. API: `GET|POST /api/schedule`, `PATCH|DELETE /api/schedule/<id>`, `POST /api/schedule/<id>/retry`, `PUT|DELETE /api/schedule/<id>/link`.
+`/calendar` (`?view=week|month&date=YYYY-MM-DD`) shows scheduled workouts and synced activities. Schedule a workout on a date; Retry, Reschedule and Remove live in each item's Actions drawer under "Intervals.icu (real account)". Schedule, Retry, Reschedule and Remove publish to intervals.icu and act on your **real** account; they need `INTERVALS_API_KEY` (and `INTERVALS_ATHLETE_ID`), otherwise they fail as not configured. API: `GET|POST /api/schedule`, `PATCH|DELETE /api/schedule/<id>`, `POST /api/schedule/<id>/retry`, `PUT|DELETE /api/schedule/<id>/link`.
 
-Planned workouts are matched to completed activities by UTC day; only running activities match. Link, No match and Unlink override the automatic match and change local data only.
+Planned workouts are matched to completed activities by UTC day; only running activities match. Link, No match and Unlink (in the drawer under "Local match (this app only)") override the automatic match and change local data only.
 
 ## Dashboard
 
