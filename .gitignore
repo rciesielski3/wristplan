@@ -20,3 +20,6 @@ KICKOFF_PROMPT.md
 .DS_Store
 tsconfig.tsbuildinfo
 src/generated/
+
+# Claude Code local settings
+.claude/settings*.json
